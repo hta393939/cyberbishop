@@ -1,0 +1,7 @@
+{
+    "source": {
+        "excludePattern": "(node_modules|third_party|nicoatsu(51|51_v021|60))"
+    },
+    "a": true,
+    "r": true
+}

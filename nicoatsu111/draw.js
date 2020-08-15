@@ -169,7 +169,8 @@ class Draw extends EventTarget {
         this.directionQueue = [];
 
         /**
-         * @type {{shows: string[]}} 現在の指示
+         * 現在の指示
+         * @type {{shows: Array<string>}}
          */
         this.direction = {
             shows: []

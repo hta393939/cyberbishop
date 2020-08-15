@@ -1,4 +1,16 @@
 {
     "name": "cyberbishop",
-    "version": "0.1.0"
+    "version": "0.1.0",
+    "scripts": {
+        "eslint": "eslint .",
+        "jsdoc": "jsdoc . -r -c ./conf.json",
+        "htmllint": "htmllint **/*.html",
+        "stylelint": "stylelint **/*.css"
+    },
+    "devDependencies": {
+        "eslint": "^7.7.0",
+        "htmllint-cli": "0.0.7",
+        "jsdoc": "^3.6.5",
+        "stylelint": "^13.6.1"
+    }
 }

@@ -43,7 +43,8 @@ class RPGAtsumaru {
 
     /**
      * 入力取得コールバックAPI
-     * @param {(info: {type: string, key: string}) => void} cb 
+     * 
+     * @param {function} cb 
      */
     subscribe(cb) {
         return window.RPGAtsumaru.controllers.defaultController.subscribe(cb);

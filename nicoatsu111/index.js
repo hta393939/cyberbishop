@@ -2,6 +2,8 @@
  * @file index.js
  */
 
+(function(global_) {
+
 'use strict';
 
 const f_ = () => {
@@ -286,7 +288,15 @@ class Misc {
 
 }
 
-const misc = new Misc();
+{
+    global_.Nicoatsu111 = {
+        Misc
+    };
+}
+
+})(globalThis);
+
+const misc = new Nicoatsu111.Misc();
 window.addEventListener('load', () => {
     misc.onload();
 });
