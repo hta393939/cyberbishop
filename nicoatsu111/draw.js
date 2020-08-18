@@ -70,6 +70,7 @@ class Draw extends EventTarget {
         this.score = 0;
         /**
          * シーン
+         * *@type {THREE.Scene}
          */
         this.mainscene = null;
 /**
@@ -1095,7 +1096,8 @@ class Draw extends EventTarget {
 
     updateEffect() {
         for (const v of this.effects) {
-            v.uniforms.uMsec = Date.now() % (1000 * 60 * 60 * 24);
+            //v.material.uniforms.uMsec.value = Date.now() % (1000 * 60 * 60 * 24);
+            v.material.uniforms.uMsec.value = Date.now() % (1000 * 60);
         }
     }
 
@@ -1670,7 +1672,9 @@ class Draw extends EventTarget {
 
     addTouchEffect() {
         const m = this.makeTouchEffect();
-        this.effects.add(m);
+        this.effects.push(m);
+
+        this.mainscene.add(m);
     }
 
 /**
@@ -1678,32 +1682,29 @@ class Draw extends EventTarget {
  */
     makeTouchEffect() {
         const vs = [
-'attribute vec3 position;',
-'attribute vec2 uv;',
 'uniform vec3 uReso;',
 'uniform vec3 uPos;',
 'uniform float uMsec;',
-'uniform mat4 worldViewProjection;',
 'varying vec2 vUv;',
 'varying float vMsec;',
 'void main() {',
 'vUv = uv;',
 'vMsec = uMsec;',
-'gl_Position = worldViewProjection * vec4(position, 1.0);',
+'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
 '}'
         ];
         const fs = [
 'varying vec2 vUv;',
 'varying float vMsec;',
 'void main() {',
-'gl_FragColor = vec4(1.0, vMsec, 0.0, 1.0);',
+'gl_FragColor = vec4(1.0, vMsec / 10000.0, 0.0, 1.0);',
 '}'
         ];
         const geo = new THREE.BufferGeometry();
         const num = 100;
-        const ps = new Float32Array(3 * num);
-        const ns = new Float32Array(3 * num);
-        const uvs = new Float32Array(2 * num);
+        const ps = new Float32Array(3 * 4 * num);
+        const ns = new Float32Array(3 * 4 * num);
+        const uvs = new Float32Array(2 * 4 * num);
         const fis = new Uint32Array(3 * 2 * num);
         const vts = [
             { px: -1, py:  1, pz: 0, u: 0, v: 1 },
@@ -1712,7 +1713,9 @@ class Draw extends EventTarget {
             { px:  1, py: -1, pz: 0, u: 1, v: 0 }
         ];
         for (let i = 0; i < num; ++i) {
-            for (const v of vts) {
+            //for (const v of vts) {
+            for (let j = 0; j < vts.length; ++j) {
+                const v = vts[j];
                 ps[i*12+j*3] = v.px;
                 ps[i*12+j*3+1] = v.py;
                 ps[i*12+j*3+2] = -i;
@@ -1733,9 +1736,9 @@ class Draw extends EventTarget {
             fis[i*6+4] = v2;
             fis[i*6+5] = v3;
         }
-        geo.addAttribute('position', new THREE.BufferAttribute(ps, 3));
-        geo.addAttribute('normal', new THREE.BufferAttribute(ns, 3));
-        geo.addAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+        geo.setAttribute('position', new THREE.BufferAttribute(ps, 3));
+        geo.setAttribute('normal', new THREE.BufferAttribute(ns, 3));
+        geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
         geo.setIndex(new THREE.BufferAttribute(fis, 1));
 
         const mtl = new THREE.ShaderMaterial({
