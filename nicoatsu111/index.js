@@ -2,8 +2,6 @@
  * @file index.js
  */
 
-(function(global_) {
-
 'use strict';
 
 const f_ = () => {
@@ -16,9 +14,15 @@ let log = (...args) => {
 };
 //log = () => {};
 
-class Misc {
+const lg = {
+    log: (...args) => {
+        console.log(`%cMisc`, `color:#808080;`, f_(), ...args);
+    }
+};
+
+class Nicoatsu111 {
     constructor() {
-        this.inver = `0.3.1`;
+        this.inver = `0.3.2`;
 
         /**
          * code はボタンでわかる(KeyA)。key は a や A
@@ -208,6 +212,8 @@ class Misc {
             if (cv) {
                 cv.addEventListener('pointerdown', ev => {
                     log(`pointerdown`, ev);
+
+                    this.drawing.addTouchEffect(ev);
                 });
                 cv.addEventListener('pointermove', ev => {
 
@@ -288,15 +294,7 @@ class Misc {
 
 }
 
-{
-    global_.Nicoatsu111 = {
-        Misc
-    };
-}
-
-})(globalThis);
-
-const misc = new Nicoatsu111.Misc();
+const misc = new Nicoatsu111();
 window.addEventListener('load', () => {
     misc.onload();
 });

@@ -5,7 +5,9 @@
         "eslint": "eslint .",
         "jsdoc": "jsdoc . -r -c ./conf.json",
         "htmllint": "htmllint **/*.html",
-        "stylelint": "stylelint **/*.css"
+        "stylelint": "stylelint **/*.css",
+        "zip60": "powershell.exe Compress-Archive -Path ./nicoatsu60/* -DestinationPath ./nicoatsu60.zip -Force",
+        "zip111": "powershell.exe Compress-Archive -Path ./nicoatsu111/* -DestinationPath ./nicoatsu111.zip -Force"
     },
     "devDependencies": {
         "eslint": "^7.7.0",

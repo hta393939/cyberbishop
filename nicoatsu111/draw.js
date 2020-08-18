@@ -72,6 +72,11 @@ class Draw extends EventTarget {
          * シーン
          */
         this.mainscene = null;
+/**
+ * エフェクトで更新される値
+ * @type {Array<THREE.Mesh>}
+ */
+        this.effects = [];
 
         /**
          * 論理幅 16:9
@@ -1081,9 +1086,16 @@ class Draw extends EventTarget {
             this.drawScore(visible);
         }
 
+        this.updateEffect();
 
         if (this.renderer) {
             this.renderer.render(this.mainscene, this.maincamera);
+        }
+    }
+
+    updateEffect() {
+        for (const v of this.effects) {
+            v.uniforms.uMsec = Date.now() % (1000 * 60 * 60 * 24);
         }
     }
 
@@ -1185,25 +1197,25 @@ class Draw extends EventTarget {
             //c.fillRect(0, 0, this.logicw, this.logich);
 
             c.fillStyle = `rgba(0, 0, 0, 1)`;
-            c.fillText(`0123456789ABCDEF`, 768 / 2, 216);
+            c.fillText(`000123456789ABCDEF`, 768 / 2, 216);
         }
         const vs = [
-            'varying vec2 vUv;',
-            'void main() {',
-            'vUv = uv;',
-            'gl_Position = vec4(position.x, position.y, position.z, 1.0);',
-            '}'
+'varying vec2 vUv;',
+'void main() {',
+'vUv = uv;',
+'gl_Position = vec4(position.x, position.y, position.z, 1.0);',
+'}'
                         ];
                         const fs = [
-            'uniform sampler2D uTex;',
-            'uniform vec2 rate;',
-            'uniform vec2 offset;',        
-            'varying vec2 vUv;',
-            'void main() {',
-            'vec2 tx = vec2(vUv.x * rate.x, 1.0 - (1.0 - vUv.y) * rate.y + offset.y);',
-            'vec4 col = texture2D(uTex, tx);',
-            'gl_FragColor = col;',
-            '}'
+'uniform sampler2D uTex;',
+'uniform vec2 rate;',
+'uniform vec2 offset;',        
+'varying vec2 vUv;',
+'void main() {',
+'vec2 tx = vec2(vUv.x * rate.x, 1.0 - (1.0 - vUv.y) * rate.y + offset.y);',
+'vec4 col = texture2D(uTex, tx);',
+'gl_FragColor = col;',
+'}'
                         ];
         {
             const geo = new THREE.PlaneBufferGeometry(2, 2);
@@ -1655,6 +1667,89 @@ class Draw extends EventTarget {
 			}
 
 */
+
+    addTouchEffect() {
+        const m = this.makeTouchEffect();
+        this.effects.add(m);
+    }
+
+/**
+ * タッチした位置に表示したい
+ */
+    makeTouchEffect() {
+        const vs = [
+'attribute vec3 position;',
+'attribute vec2 uv;',
+'uniform vec3 uReso;',
+'uniform vec3 uPos;',
+'uniform float uMsec;',
+'uniform mat4 worldViewProjection;',
+'varying vec2 vUv;',
+'varying float vMsec;',
+'void main() {',
+'vUv = uv;',
+'vMsec = uMsec;',
+'gl_Position = worldViewProjection * vec4(position, 1.0);',
+'}'
+        ];
+        const fs = [
+'varying vec2 vUv;',
+'varying float vMsec;',
+'void main() {',
+'gl_FragColor = vec4(1.0, vMsec, 0.0, 1.0);',
+'}'
+        ];
+        const geo = new THREE.BufferGeometry();
+        const num = 100;
+        const ps = new Float32Array(3 * num);
+        const ns = new Float32Array(3 * num);
+        const uvs = new Float32Array(2 * num);
+        const fis = new Uint32Array(3 * 2 * num);
+        const vts = [
+            { px: -1, py:  1, pz: 0, u: 0, v: 1 },
+            { px:  1, py:  1, pz: 0, u: 1, v: 1 },
+            { px: -1, py: -1, pz: 0, u: 0, v: 0 },
+            { px:  1, py: -1, pz: 0, u: 1, v: 0 }
+        ];
+        for (let i = 0; i < num; ++i) {
+            for (const v of vts) {
+                ps[i*12+j*3] = v.px;
+                ps[i*12+j*3+1] = v.py;
+                ps[i*12+j*3+2] = -i;
+                ns[i*12+j*3] = 0;
+                ns[i*12+j*3+1] = 0;
+                ns[i*12+j*3+2] = 1;
+                uvs[i*8+j*2] = vts.u;
+                uvs[i*8+j*2+1] = vts.v;
+            }
+            let v0 = i * 4;
+            let v1 = v0 + 1;
+            let v2 = v1 + 1;
+            let v3 = v2 + 1;
+            fis[i*6] = v0;
+            fis[i*6+1] = v2;
+            fis[i*6+2] = v1;
+            fis[i*6+3] = v1;
+            fis[i*6+4] = v2;
+            fis[i*6+5] = v3;
+        }
+        geo.addAttribute('position', new THREE.BufferAttribute(ps, 3));
+        geo.addAttribute('normal', new THREE.BufferAttribute(ns, 3));
+        geo.addAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+        geo.setIndex(new THREE.BufferAttribute(fis, 1));
+
+        const mtl = new THREE.ShaderMaterial({
+            vertexShader: vs.join('\n'),
+            fragmentShader: fs.join('\n'),
+            uniforms: {
+                uReso: new THREE.Uniform(new THREE.Vector3(1024, 1024, 1)),
+                uPos: new THREE.Uniform(new THREE.Vector3(0, 0, 0)),
+                uMsec: new THREE.Uniform(0)
+            }
+        });
+        const m = new THREE.Mesh(geo, mtl);
+        return m;
+    }
 
 }
 
