@@ -160,12 +160,18 @@ class Nicoatsu111 {
         console.log(`applyCurrent`, r, w, h, w / h);
 
         this.resize(w, h);
+
+        this.drawing.setWH({
+            curw: w,
+            curh: h,
+            devicePixelRatio: r
+        });
     }
 
     setListener() {
         {
             this.applyCurrent();
-            window.addEventListener('resize', ev => {
+            window.addEventListener('resize', () => {
                 this.applyCurrent();
             });
         }

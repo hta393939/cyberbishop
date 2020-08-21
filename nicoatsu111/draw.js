@@ -208,6 +208,20 @@ class Draw extends EventTarget {
          */
         this.amblevel = 1.0;
 
+        /**
+         * makeSprite のあたり
+         */
+        this.ORDER_SPRITE = 950000;
+
+        /**
+         * かなり後の方
+         */
+        this.ORDER_OVERSCREEN = 980000;
+/**
+ * もっとも最後
+ */
+        this.ORDER_TOUCH = 990000;
+
 /**
  * このクラスからのイベント
  */
@@ -253,7 +267,8 @@ class Draw extends EventTarget {
         const hour = new Date().getHours();
         const night = (hour >= 23 || hour < 5);
         //const night = true;
-        renderer.setClearColor(night ? 0xffee00 : 0xeeffff, 1.0);
+        //renderer.setClearColor(night ? 0xffee00 : 0xeeffff, 1.0);
+        renderer.setClearColor(0x333366, 1.0);
 
         const mainscene = new THREE.Scene();
         this.mainscene = mainscene;
@@ -1095,22 +1110,22 @@ class Draw extends EventTarget {
     }
 
     updateEffect() {
-        for (const v of this.effects) {
+        const d = new Date();
+        let num = this.effects.length;
+        for (let i = num - 1; i >= 0; --i) {
+            const v = this.effects[i];
             //v.material.uniforms.uMsec.value = Date.now() % (1000 * 60 * 60 * 24);
-            v.material.uniforms.uMsec.value = Date.now() % (1000 * 60);
+            const diff = d.getTime() - v.userData.basets;
+            if (diff < 2000) {
+                v.material.uniforms.uMsec.value = diff;
+            } else {
+                this.mainscene.remove(v);
+                this.effects.splice(i, 1);
+            }
+
+            //v.material.uniforms.uReso.value.set(this.curw, this.curh, 100);
         }
     }
-
-    /**
-     * 816x624(RPGツクールMVデフォルト設定)、 624x816、"768x432"
-     * @param {number} inw 
-     * @param {number} inh 
-     */
-    resize(inw, inh) {
-        this.curw = inw;
-        this.curh = inh;
-    }
-
 
     async initialize() {
         this.checkSize();
@@ -1123,14 +1138,16 @@ class Draw extends EventTarget {
         log(`checkSize leave rc`, rc, window);
     }
 
-    applyCurrent() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        const r = window.devicePixelRatio;
-        log(`applyCurrent`, r, w, h, w / h);
-
-        this.resize(w, h);
+/**
+ * API. 論理幅高さではないサイズをセットする
+ * @param {{curw: number, curh: number}} inopt 
+ */
+    setWH(inopt) {
+        this.curw = inopt.curw;
+        this.curh = inopt.curh;
+        //this.dpr = inopt.devicePixelRatio;
     }
+
     /**
      * スプライト3枚
      */
@@ -1165,7 +1182,7 @@ class Draw extends EventTarget {
                 depthTest: false
             });
             const sp = new THREE.Sprite(mtl);
-            sp.renderOrder = 1000000;
+            sp.renderOrder = this.ORDER_SPRITE;
             sp.position.set(v.p[0], v.p[1], v.p[2]);
 
             this.sps.push({ cv: cv, sp: sp });
@@ -1239,7 +1256,7 @@ class Draw extends EventTarget {
                 depthTest: false
             });
             const m = new THREE.Mesh(geo, mtl);
-            m.renderOrder = 1501000;
+            m.renderOrder = this.ORDER_OVERSCREEN;
 
             this.overscreen = m;
 
@@ -1265,7 +1282,7 @@ class Draw extends EventTarget {
                 depthTest: false
             });
             const m = new THREE.Mesh(geo, mtl);
-            m.renderOrder = 1502000;
+            m.renderOrder = this.ORDER_SPRITE;
 
             this.overscreen2 = m;
 
@@ -1670,8 +1687,14 @@ class Draw extends EventTarget {
 
 */
 
-    addTouchEffect() {
-        const m = this.makeTouchEffect();
+    addTouchEffect(ev) {
+        const m = this.makeTouchEffect({
+            w: this.curw,
+            h: this.curh,
+            x: ev.offsetX,
+            y: ev.offsetY
+        });
+        m.userData.basets = Date.now();
         this.effects.push(m);
 
         this.mainscene.add(m);
@@ -1679,8 +1702,9 @@ class Draw extends EventTarget {
 
 /**
  * タッチした位置に表示したい
+ * @param {{ w: number, h: number, x: number, y: number }} inopt 
  */
-    makeTouchEffect() {
+    makeTouchEffect(inopt) {
         const vs = [
 'uniform vec3 uReso;',
 'uniform vec3 uPos;',
@@ -1688,20 +1712,31 @@ class Draw extends EventTarget {
 'varying vec2 vUv;',
 'varying float vMsec;',
 'void main() {',
+'float M_PI = 3.1415926535;',
+'float id = - position.z;',
+'float idrate1 = id / uPos.z + uMsec / 2000.0;',
+'vec2 rot1 = vec2(cos(idrate1 * M_PI * 2.0), sin(idrate1 * M_PI * 2.0));',
+'vec2 rot2 = vec2(cos(idrate1 * M_PI * 2.0), sin(idrate1 * M_PI * 2.0));',
 'vUv = uv;',
 'vMsec = uMsec;',
-'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+'float r1 = uReso.z * min(1.0, uMsec / 500.0);',
+//'float r2 = uReso.z * min(1.0, uMsec / 20000.0);',
+'float r2 = 4.0;',
+'float x = (uPos.x + rot1.x * r1 + rot2.x * position.x * r2 - rot2.y * position.y * r2) / (uReso.x * 0.5) - 1.0;',
+'float y = 1.0 - (uPos.y + rot1.y * r1 + rot2.y * position.x * r2 + rot2.x * position.y * r2) / (uReso.y * 0.5);',
+//'gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);',
+'gl_Position = vec4(x, y, -1.0, 1.0);',
 '}'
         ];
         const fs = [
 'varying vec2 vUv;',
 'varying float vMsec;',
 'void main() {',
-'gl_FragColor = vec4(1.0, vMsec / 10000.0, 0.0, 1.0);',
+'gl_FragColor = vec4(0.9, vMsec / 6000.0, 0.01, 1.0);',
 '}'
         ];
         const geo = new THREE.BufferGeometry();
-        const num = 100;
+        const num = 20;
         const ps = new Float32Array(3 * 4 * num);
         const ns = new Float32Array(3 * 4 * num);
         const uvs = new Float32Array(2 * 4 * num);
@@ -1741,16 +1776,27 @@ class Draw extends EventTarget {
         geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
         geo.setIndex(new THREE.BufferAttribute(fis, 1));
 
+        const dpr = window.devicePixelRatio;
         const mtl = new THREE.ShaderMaterial({
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthTest: false,
+            depthWrite: false,
+            side: THREE.DoubleSide,
             vertexShader: vs.join('\n'),
             fragmentShader: fs.join('\n'),
             uniforms: {
-                uReso: new THREE.Uniform(new THREE.Vector3(1024, 1024, 1)),
-                uPos: new THREE.Uniform(new THREE.Vector3(0, 0, 0)),
+                uReso: new THREE.Uniform(new THREE.Vector3(this.logicw, this.logich, 20)),
+                uPos: new THREE.Uniform(new THREE.Vector3(
+                    inopt.x * this.logicw / inopt.w,
+                    inopt.y * this.logich / inopt.h,
+                    num)),
                 uMsec: new THREE.Uniform(0)
             }
         });
         const m = new THREE.Mesh(geo, mtl);
+        m.renderOrder = this.ORDER_TOUCH;
+        m.userData = {};
         return m;
     }
 
