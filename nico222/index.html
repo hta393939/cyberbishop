@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>ammon.js ビークル</title>
+        <link rel="stylesheet" href="./index.css" />
+        <script src="./third_party/three.min.js"></script>
+        <script src="./third_party/GLTFLoader.js"></script>
+        <script src="./third_party/TrackballControls.js"></script>
+        <script src="./third_party/ammo.wasm.js"></script>
+        <script src="./third_party/three-vrm.min.js"></script>
+        <script src="./ra.js"></script>
+        <script src="./analog.js"></script>
+        <script src="./phy.js"></script>
+        <script src="./draw.js"></script>
+        <script src="./index.js"></script>
+    </head>
+    <body>
+        <div class="toright">
+            <div id="idtimeview"></div>
+                <div class="spacing"></div>
+            <div id="idwheelnumview"></div>
+                <div class="spacing"></div>
+            <div id="idfpsview"></div>
+                <div class="spacing"></div>
+            <div>
+                <input id="idlogging" value="ログ" type="button" />
+            </div>
+        </div>
+        <canvas id="idcanvas"></canvas>
+
+        <canvas id="idmain" hidden="hidden"></canvas>
+    </body>
+</html>
+
+
