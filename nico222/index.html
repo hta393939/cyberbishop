@@ -7,13 +7,16 @@
         <script src="./third_party/three.min.js"></script>
         <script src="./third_party/GLTFLoader.js"></script>
         <script src="./third_party/TrackballControls.js"></script>
+        <!--
         <script src="./third_party/ammo.wasm.js"></script>
+        -->
+        <script src="./third_party/ammo.js"></script>
         <script src="./third_party/three-vrm.min.js"></script>
         <script src="./ra.js"></script>
         <script src="./analog.js"></script>
-        <script src="./phy.js"></script>
+
         <script src="./draw.js"></script>
-        <script src="./index.js"></script>
+
     </head>
     <body>
         <div class="toright">
@@ -30,6 +33,8 @@
         <canvas id="idcanvas"></canvas>
 
         <canvas id="idmain" hidden="hidden"></canvas>
+
+        <script src="./phy.js" defer></script>
     </body>
 </html>
 
