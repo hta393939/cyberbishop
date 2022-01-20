@@ -68,6 +68,12 @@ const bt2q = (a) => {
     return new THREE.Quaternion(a.x(), a.y(), a.z(), a.w());
 };
 
+
+//var DISABLE_DEACTIVATION = 4;
+
+
+var clock = new THREE.Clock();
+
 /**
  * var の高さデータ
  */
@@ -78,6 +84,25 @@ var heightData = null;
 var ammoHeightData = null;
 
 var transformAux1 = null;
+
+/**
+ * 物理コンフィグ
+ */
+var config;
+var dispatcher;
+var broadphase;
+var solver;
+
+/**
+ * ワールド
+ */
+var physicsWorld;
+
+/**
+ * 同期関数リスト
+ */
+var syncList = [];
+var time = 0;
 
 
 /**
@@ -172,14 +197,11 @@ class Car {
     }
 
 /**
- * Car インスタンスを初期化する
+ * 〇 これを使う．Car インスタンスを初期化する
  * @param {Ammo.btDynamicPhysicsWorld}
  */
-    init(inworld) {
+    init() {
         console.log(this.name, 'init called');
-
-        this.world = inworld;
-
 // 
         const pos = new THREE.Vector3(0, 4, -20 + 10);
 
@@ -199,7 +221,7 @@ class Car {
             this.massVehicle, motionState, this.geometry, localInertia);
         const body = new Ammo.btRigidBody(rbInfo);
         body.setActivationState(DISABLE_DEACTIVATION);
-        this.world.addRigidBody(body);
+        physicsWorld.addRigidBody(body);
         const chassisMesh = this.createChassisMesh(
             this.chassisWidth,
             this.chassisHeight,
@@ -212,12 +234,12 @@ class Car {
         this.vehicleSteering = 0;
         this.breakingForce = 0;
         this.tuning = new Ammo.btVehicleTuning();
-        this.rayCaster = new Ammo.btDefaultVehicleRaycaster(this.world);
-        const vehicle = new Ammo.btRaycastVehicle(
+        this.rayCaster = new Ammo.btDefaultVehicleRaycaster(physicsWorld);
+        var vehicle = new Ammo.btRaycastVehicle(
             this.tuning, this.body, this.rayCaster);
-        this.vehicle = vehicle;
-        this.vehicle.setCoordinateSystem(0, 1, 2);
-        this.world.addAction(this.vehicle);
+
+        vehicle.setCoordinateSystem(0, 1, 2);
+        physicsWorld.addAction(vehicle);
 
         this.FRONT_LEFT = 0;
         this.FRONT_RIGHT = 1;
@@ -291,7 +313,54 @@ class Car {
             this.wheelWidthBack,
             this.BACK_RIGHT);
 
-        //this.syncList.push(this.sync.bind(this));
+        function sync(dt) {
+            const speed = vehicle.getCurrentSpeedKmHour();
+    
+            this.breakingForce = 0;
+            this.engineForce = 0;
+    
+            if (false) {
+    
+            }
+            if (false) {
+    
+            }
+    /*
+            vehicle.applyEngineForce(this.engineForce, this.BACK_LEFT);
+            vehicle.applyEngineForce(this.engineForce, this.BACK_RIGHT);
+    
+            vehicle.setBrake(this.breakingForce / 2, this.FRONT_LEFT);
+            vehicle.setBrake(this.breakingForce / 2, this.FRONT_RIGHT);
+            vehicle.setBrake(this.breakingForce, this.BACK_LEFT);
+            vehicle.setBrake(this.breakingForce, this.BACK_RIGHT);
+    
+            vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_LEFT);
+            vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_RIGHT);
+    */      
+            const n = vehicle.getNumWheels();
+            window.idwheelnumview.textContent = `${n} ${tstr()}`;
+    
+    // TODO: var
+            var tm, p, q;
+            for (let i = 0; i < n; ++i) {
+                vehicle.updateWheelTransform(i, true);
+                tm = vehicle.getWheelTransformWS(i);
+                p = tm.getOrigin();
+                q = tm.getRotation();
+                // TODO: 〇
+//                this.wheelMeshes[i].position.set(p.x(), p.y(), p.z());
+//                this.wheelMeshes[i].quaternion.copy(bt2q(q));
+            }
+    
+            tm = vehicle.getChassisWorldTransform();
+            p = tm.getOrigin();
+            q = tm.getRotation();
+            // TODO: 〇
+            //this.chassisMesh.position.set(p.x(), p.y(), p.z());
+            //this.chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
+        }
+
+        syncList.push(sync);
     }
 
     createChassisMesh(w, l, h) {
@@ -523,25 +592,7 @@ class Phy extends EventTarget {
 
     }
 
-/**
- * 物理演算の共通初期化
- */
-    initPhysics() {
-        console.log(this.name, 'initPhysics');
-        {
-            const config = new Ammo.btDefaultCollisionConfiguration();
-            const dispatcher = new Ammo.btCollisionDispatcher(config);
-            const broadphase = new Ammo.btDbvtBroadphase();
-            const solver = new Ammo.btSequentialImpulseConstraintSolver();
 
-            const world = new Ammo.btDiscreteDynamicsWorld(
-                dispatcher, broadphase, solver, config
-            );
-            this.world = world;
-            world.setGravity(bt3(0, -9.82, 0));
-        }
-        console.log(this.name, 'initPhysics leaves');
-    }
 
 /**
  * 初回に1回だけ
@@ -617,11 +668,6 @@ class Phy extends EventTarget {
 
             const lighthelper = new THREE.CameraHelper(light.shadow.camera);
             //mainscene.add(lighthelper);
-        }
-
-        {
-            const clock = new THREE.Clock();
-            this.clock = clock;
         }
 
         console.log(this.name, 'initGL leaves');
@@ -785,7 +831,7 @@ class Phy extends EventTarget {
                 mass, motionState, groundShape, localInertia
             );
             const body = new Ammo.btRigidBody(rbInfo);
-            this.world.addRigidBody(body);
+            physicsWorld.addRigidBody(body);
         }
     }
 
@@ -826,29 +872,6 @@ class Phy extends EventTarget {
             window.idfpsview.textContent = `${fps.toFixed(1)} [fps]`;
         }
 
-
-        const dt = this.clock.getDelta();
-
-        if (this.control) {
-            this.control.update();
-        }
-
-        this.mainscene.traverse(obj => {
-            const syncfunc = obj?.userData?.syncfunc;
-            if (!syncfunc) {
-                return;
-            }
-            syncfunc(dt);
-        });
-
-// 物理演算のワールドを更新する
-        this.world.stepSimulation(dt, 10);
-
-        if (this.car) {
-            this.car.sync(dt);
-        }
-
-        this.time += dt;
         {
             const el = window.idtimeview;
             el.textContent = `${this.time.toFixed(1)}`;
@@ -872,7 +895,7 @@ class Phy extends EventTarget {
         }
         this.prets = nowts;
 
-        const deltaTime = this.clock.getDelta();
+        const deltaTime = clock.getDelta();
 
         if (this.renderer) {
             this.renderer.render(this.mainscene, this.maincamera);
@@ -889,12 +912,11 @@ class Phy extends EventTarget {
         console.log(this.name, 'initialize called');
 
         this.initGL(inopt.canvas);
-        this.initPhysics();
 
         {
             const car = new Car();
             this.car = car;
-            car.init(this.world);
+            car.init(physicsWorld);
 
             this.mainscene.add(car.chassisMesh);
             for (const v of car.wheelMeshes) {
@@ -953,7 +975,7 @@ class Phy extends EventTarget {
             body.setFriction(0);
             body.setDamping(0, 0);
 // ワールドに追加
-            this.world.addRigidBody(body);
+            physicsWorld.addRigidBody(body);
 
             m.userData.rigidbody = body;
 
@@ -1138,10 +1160,6 @@ class Misc {
         }
 
         {
-            if (typeof Ammo === 'function') {
-                await Ammo();
-            }
-
             const phy = new Phy();
             this.phy = phy;
             phy.initialize({
@@ -1326,10 +1344,54 @@ class Misc {
 }
 
 
+/**
+ * 物理演算の共通初期化
+ */
+function initPhysics() {
+    console.log('initPhysics called');
+    {
+        config = new Ammo.btDefaultCollisionConfiguration();
+        dispatcher = new Ammo.btCollisionDispatcher(config);
+        broadphase = new Ammo.btDbvtBroadphase();
+        solver = new Ammo.btSequentialImpulseConstraintSolver();
+
+        physicsWorld = new Ammo.btDiscreteDynamicsWorld(
+            dispatcher, broadphase, solver, config
+        );
+        physicsWorld.setGravity(bt3(0, -9.82, 0));
+    }
+    console.log('initPhysics leaves');
+}
+
+
+function createObjects() {
+
+}
+
 const misc = new Misc();
-misc.initialize();
 
 
+function tick() {
+    requestAnimationFrame(tick);
+    var dt = clock.getDelta();
+    for (let i = 0; i < syncList.length; ++i) {
+        syncList[i](dt);
+    }
+    physicsWorld.stepSimulation(dt, 10);
+    if (misc?.phy?.control) {
+        misc.phy.control.update();
+    }
+    time += dt;
+}
+
+
+
+
+
+    initPhysics();
+    misc.initialize();
+    createObjects();
+    tick();
 });
 
 
