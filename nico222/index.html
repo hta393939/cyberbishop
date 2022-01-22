@@ -4,14 +4,6 @@
         <meta charset="UTF-8" />
         <title>ammon.js ビークル</title>
         <link rel="stylesheet" href="./index.css" />
-        <script src="./third_party/three.min.js"></script>
-        <script src="./third_party/GLTFLoader.js"></script>
-        <script src="./third_party/TrackballControls.js"></script>
-        <!--
-        <script src="./third_party/ammo.wasm.js"></script>
-        -->
-        <script src="./third_party/ammo.js"></script>
-        <script src="./third_party/three-vrm.min.js"></script>
     </head>
     <body>
         <div class="toright">
@@ -25,9 +17,20 @@
                 <input id="idlogging" value="ログ" type="button" />
             </div>
         </div>
-        <canvas id="idcanvas"></canvas>
+        <div id="container"></div>
+        <canvas id="idmain"></canvas>
 
-        <script src="./phy.js" defer></script>
+
+        <script src="./third_party/three.min.js"></script>
+        <script src="./third_party/GLTFLoader.js"></script>
+        <script src="./third_party/OrbitControls.js"></script>
+        <script src="./third_party/TrackballControls.js"></script>
+        <!--
+        <script src="./third_party/ammo.wasm.js"></script>
+        -->
+        <script src="./third_party/ammo.js"></script>
+        <script src="./third_party/three-vrm.min.js"></script>
+        <script src="./phy.js"></script>
     </body>
 </html>
 

@@ -23,11 +23,6 @@ const tstr = () => {
     return new Date().toLocaleTimeString();
 };
 
-/**
- * 定数
- * @default 4
- */
-const DISABLE_DEACTIVATION = 4;
 
 /**
  * ammo v3 を返す
@@ -69,8 +64,23 @@ const bt2q = (a) => {
 };
 
 
+/**
+ * 定数
+ * @default 4
+ */
+const DISABLE_DEACTIVATION = 4;
+var TRANSFORM_AUX = new Ammo.btTransform();
 
 var scene;
+var camera;
+/**
+ * three レンダラ
+ */
+var renderer;
+/**
+ * コントロール
+ */
+var controls;
 var clock = new THREE.Clock();
 
 /**
@@ -195,73 +205,14 @@ class Car {
 /**
  * loader.load() は data: arrayBuffer みたい
  */
-class Phy extends EventTarget {
+class Phy {
     constructor() {
-        super();
-
-        this.name = 'Phy';
-
-        this.inver = `0.1.0`;
-
-        this.STATUS_TITLE = 'title';
-        this.STATUS_GAME = 'game';
-        this.STATUS_GAMEOVER = 'gameover';
-        this.STATUS_LOADING = 'loading';
-        this.status = '' + this.STATUS_TITLE;
-
         this.tempTrans = new Ammo.btTransform();
 // TODO: var
         transformAux1 = new Ammo.btTransform();
 
-        /**
-         * ロード途中でキャンセル押すとこれを立てる
-         */
-        this.cancelloading = false;
-
-        this.loading = {
-            loaded: 0,
-            total: 0
-        };
-
         this.amblevel = 0.8;
         this.difflevel = 0.6;
-
-        /**
-         * シーン
-         * *@type {THREE.Scene}
-         */
-        this.mainscene = null;
-/**
- * エフェクトで更新される値
- * @type {Array<THREE.Mesh>}
- */
-        this.effects = [];
-
-        /**
-         * 論理幅 16:9
-         */
-        this.logicw = 768;
-/**
- * 論理高さ
- * @default 432
- */
-        this.logich = 432;
-
-        /**
-         * ブラウザでのピクセル認識幅
-         */
-        this.curw = + this.logicw;
-        this.curh = + this.logich;
-
-
-/**
- * deltaTime の総和
- */
-        this.time = 0;
-
-        this.ts = [];
-        this.windowmsec = 3000;
-        this.targetfps = 60;
 
         this.terrainWidth = 128;
 /**
@@ -288,80 +239,6 @@ class Phy extends EventTarget {
  */
         this.terrainMinHeight = -2 - 4;
 
-    }
-
-
-
-/**
- * 初回に1回だけ
- * @param {HTMLCanavsElement} canvas 
- */
-    initGL(canvas) {
-        console.log(this.name, 'initGL called');
-
-        let w = this.logicw;
-        let h = this.logich;
-
-        const opt = {
-            preserveDrawingBuffer: true,
-            canvas,
-            antialias: true,
-            alpha: true
-        };
-        const renderer = new THREE.WebGLRenderer(opt);
-        this.renderer = renderer;
-
-        renderer.setSize(w, h, false);
-        renderer.setClearColor(0x333366, 1.0);
-
-        renderer.shadowMap.enabled = true;
-
-        const mainscene = new THREE.Scene();
-        this.mainscene = mainscene;
-        scene = mainscene;
-
-        const maincamera = new THREE.PerspectiveCamera(45,
-            w / h, 0.02, 1000);
-        this.maincamera = maincamera;
-        let z = 2.7 * 10;
-        maincamera.position.set(0, 1.0, z);
-        maincamera.lookAt(new THREE.Vector3(0, 1.0, 0));
-
-        {
-            const axes = new THREE.AxesHelper(10);
-            scene.add(axes);
-        }
-
-        { // 顔暗くなる
-            let lv = Math.floor(this.amblevel * 255);
-            const light = new THREE.AmbientLight((lv << 16) | (lv << 8) | lv);
-            scene.add(light);
-        }
-        {
-            let lv = Math.floor(this.difflevel * 255);
-            const light = new THREE.DirectionalLight(0x010101 * lv);
-            light.castShadow = true;
-            //light.shadow.mapSize.width = 2048;
-            //light.shadow.mapSize.height = 2048;
-            //light.shadow.camera.near = 1;
-            //light.shadow.camera.far = 100;
-            //light.shadow.camera.light = -100;
-            //light.shadow.camera.right = 100;
-            //light.shadow.camera.top = -100;
-            //light.shadow.camera.bottom = 100;
-            //scene.add(light.target);
-
-            light.position.set(-10, 10, 10);
-            scene.add(light);
-
-            const helper = new THREE.DirectionalLightHelper(light);
-            //scene.add(helper);
-
-            const lighthelper = new THREE.CameraHelper(light.shadow.camera);
-            //scene.add(lighthelper);
-        }
-
-        console.log(this.name, 'initGL leaves');
     }
 
 /**
@@ -484,15 +361,6 @@ class Phy extends EventTarget {
         return heightShape;
     }
 
-/**
- * API. 
- * @param {HTMLElement} dom 
- */
-    makeControl(dom) {
-        const control = new THREE.TrackballControls(this.maincamera, dom);
-        this.control = control;
-    }
-
     ready() {
         return;
         {
@@ -517,16 +385,6 @@ class Phy extends EventTarget {
         }
     }
 
-/**
- * API. 初期化する
- * @param {{}} inopt 
- */
-    async initialize(inopt) {
-        console.log(this.name, 'initialize called');
-        this.initGL(inopt.canvas);
-        console.log(this.name, 'initialize leaves');
-    }
-
 }
 
 
@@ -539,14 +397,21 @@ class Phy extends EventTarget {
  * @param {number} h 
  * @param {number} mass 
  * @param {number} friction 
- * @returns 
  */
 function createBox(pos, quat, w, l, h, mass, friction) {
-    const geo = new THREE.BoxBufferGeometry(
-        w, l, h);
+    var geo = new THREE.BoxBufferGeometry(
+        w, l, h, 1, 1, 1);
     const mtl = new THREE.MeshStandardMaterial({
         color: 0xffcccc,
     });
+
+    if (!mass) {
+        mass = 0;
+    }
+    if (!friction) {
+        friction = 1;
+    }
+
     const m = new THREE.Mesh(geo, mtl);
     m.position.copy(pos);
     m.quaternion.copy(quat);
@@ -556,14 +421,14 @@ function createBox(pos, quat, w, l, h, mass, friction) {
         w * 0.5,
         l * 0.5,
         h * 0.5));
-    const transform = new Ammo.btTransform();
+    var transform = new Ammo.btTransform();
     transform.setIdentity();
     transform.setOrigin(bt3(pos.x, pos.y, pos.z));
     transform.setRotation(btq(quat.x, quat.y, quat.z, quat.w));
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const localInertia = bt3(0, 0, 0);
+    var motionState = new Ammo.btDefaultMotionState(transform);
+    var localInertia = bt3(0, 0, 0);
     box.calculateLocalInertia(localInertia);
-    const body = new Ammo.btRigidBody(
+    var body = new Ammo.btRigidBody(
         new Ammo.btRigidBodyConstructionInfo(
             mass, motionState, box, localInertia)
     );
@@ -573,16 +438,13 @@ function createBox(pos, quat, w, l, h, mass, friction) {
     physicsWorld.addRigidBody(body);
 
     if (mass > 0) {
-    //{
         body.setActivationState(DISABLE_DEACTIVATION);
-
         function sync() {
-            const ms = body.getMotionState();
+            var ms = body.getMotionState();
             if (ms) {
-                // TODO: var
-                ms.getWorldTransform(transformAux1);
-                const p = transformAux1.getOrigin();
-                const q = transformAux1.getRotation();
+                ms.getWorldTransform(TRANSFORM_AUX);
+                var p = TRANSFORM_AUX.getOrigin();
+                var q = TRANSFORM_AUX.getRotation();
                 m.position.set(p.x(), p.y(), p.z());
                 m.quaternion.set(q.x(), q.y(), q.z(), q.w());
             }
@@ -723,21 +585,22 @@ function createVehicle(pos, quat) {
          this.maxEngineForce = 2000;
          this.maxBreakingForce = 100;
 
+
     // Chassis
-    this.geometry = new Ammo.btBoxShape(
-        bt3(this.chassisWidth * 0.5,
+    var geometry = new Ammo.btBoxShape(
+        new Ammo.btVector3(this.chassisWidth * 0.5,
             this.chassisHeight * 0.5,
             this.chassisDepth * 0.5));
-    const transform = new Ammo.btTransform();
+    var transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(bt3(pos.x, pos.y, pos.z));
+    transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
     transform.setRotation(btq(quat.x, quat.y, quat.z, quat.w));
-    const motionState = new Ammo.btDefaultMotionState(transform);
-    const localInertia = bt3(0, 0, 0);
-    this.geometry.calculateLocalInertia(this.massVehicle, localInertia);
-    const rbInfo = new Ammo.btRigidBodyConstructionInfo(
+    var motionState = new Ammo.btDefaultMotionState(transform);
+    var localInertia = new Ammo.btVector3(0, 0, 0);
+    geometry.calculateLocalInertia(this.massVehicle, localInertia);
+    var rbInfo = new Ammo.btRigidBodyConstructionInfo(
         this.massVehicle, motionState, this.geometry, localInertia);
-    const body = new Ammo.btRigidBody(rbInfo);
+    var body = new Ammo.btRigidBody(rbInfo);
     body.setActivationState(DISABLE_DEACTIVATION);
     physicsWorld.addRigidBody(body);
     var chassisMesh = createChassisMesh(
@@ -745,7 +608,6 @@ function createVehicle(pos, quat) {
         this.chassisHeight,
         this.chassisDepth,
     );
-    this.chassisMesh = chassisMesh;
 
 // レイキャストビークル
     this.engineForce = 0;
@@ -767,10 +629,6 @@ function createVehicle(pos, quat) {
  * 車輪を保持する
  */
     var wheelMeshes = [];
-/**
-* @type {THREE.Mesh[]}
-*/
-    this.wheelMeshes = [null, null, null, null];
 
     this.wheelDirectionCS0 = bt3(0, -1, 0);
     this.wheelAxleCS = bt3(-1, 0, 0);
@@ -785,9 +643,9 @@ function createVehicle(pos, quat) {
 */
     function addWheel(isFront, pos, radius, width, index) {
 //    const addWheel = (isFront, pos, radius, width, index) => {
-        console.log(this.name, 'addWheel called', index);
+        console.log('addWheel called', index);
 
-        const wheelInfo = vehicle.addWheel(
+        var wheelInfo = vehicle.addWheel(
             pos,
             this.wheelDirectionCS0,
             this.wheelAxleCS,
@@ -806,14 +664,14 @@ function createVehicle(pos, quat) {
     }
 
     addWheel(true,
-        bt3(this.wheelHalfTrackFront,
+        new Ammo.btVector3(this.wheelHalfTrackFront,
             this.wheelAxisHeightFront,
             this.wheelAxisFrontPosition),
         this.wheelRadiusFront,
         this.wheelWidthFront,
         this.FRONT_LEFT);
     addWheel(true,
-        bt3(-this.wheelHalfTrackFront,
+        new Ammo.btVector3(-this.wheelHalfTrackFront,
             this.wheelAxisHeightFront,
             this.wheelAxisFrontPosition),
         this.wheelRadiusFront,
@@ -821,14 +679,14 @@ function createVehicle(pos, quat) {
         this.FRONT_RIGHT);
 
     addWheel(false,
-        bt3(this.wheelHalfTrackBack,
+        new Ammo.btVector3(this.wheelHalfTrackBack,
             this.wheelAxisHeightBack,
             this.wheelAxisPositionBack),
         this.wheelRadiusBack,
         this.wheelWidthBack,
         this.BACK_LEFT);
     addWheel(false,
-        bt3(-this.wheelHalfTrackBack,
+        new Ammo.btVector3(-this.wheelHalfTrackBack,
             this.wheelAxisHeightBack,
             this.wheelAxisPositionBack),
         this.wheelRadiusBack,
@@ -906,7 +764,84 @@ function initPhysics() {
     console.log('initPhysics leaves');
 }
 
-const phy = new Phy();
+/**
+ * グラフィックスの初期化
+ */
+function initGraphics() {
+    console.log('initGL called');
+
+    let w = 768;
+    let h = 432;
+
+    scene = new THREE.Scene();
+
+    camera = new THREE.PerspectiveCamera(60,
+        w / h, 0.2, 2000);
+    let z = 2.7 * 10;
+    camera.position.set(-4.84, 4.39, z);
+    camera.lookAt(new THREE.Vector3(0.33, -0.40, 0.85));
+
+    const canvas = window.idmain;
+
+    const opt = {
+        //preserveDrawingBuffer: true,
+        canvas,
+        antialias: true,
+        //alpha: true
+    };
+    renderer = new THREE.WebGLRenderer(opt);
+    renderer.setClearColor(0x333366, 1.0);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(w, h, false);
+
+    //renderer.shadowMap.enabled = true;
+
+
+    {
+        //controls = new THREE.OrbitControls(camera, canvas);
+        controls = new THREE.TrackballControls(camera, canvas);
+    }
+
+    {
+        const axes = new THREE.AxesHelper(10);
+        scene.add(axes);
+    }
+
+    { // 顔暗くなる
+        let lv = Math.floor(0.6 * 255);
+        var light = new THREE.AmbientLight((lv << 16) | (lv << 8) | lv);
+        scene.add(light);
+    }
+    {
+        let lv = 51;
+        var light = new THREE.DirectionalLight(0x010101 * lv, 1);
+        light.castShadow = true;
+        //light.shadow.mapSize.width = 2048;
+        //light.shadow.mapSize.height = 2048;
+        //light.shadow.camera.near = 1;
+        //light.shadow.camera.far = 100;
+        //light.shadow.camera.light = -100;
+        //light.shadow.camera.right = 100;
+        //light.shadow.camera.top = -100;
+        //light.shadow.camera.bottom = 100;
+        //scene.add(light.target);
+
+        light.position.set(-10, 10, 10);
+        scene.add(light);
+
+        const helper = new THREE.DirectionalLightHelper(light);
+        //scene.add(helper);
+
+        const lighthelper = new THREE.CameraHelper(light.shadow.camera);
+        //scene.add(lighthelper);
+    }
+
+    window.container.appendChild(renderer.domElement);
+
+    console.log('initGL leaves');
+}
+
+//const phy = new Phy();
 
 
 function createObjects() {
@@ -945,29 +880,20 @@ function tick() {
         syncList[i](dt);
     }
     physicsWorld.stepSimulation(dt, 10);
-    if (phy?.control) {
-        phy.control.update();
-    }
-    if (phy.renderer) {
-        phy.renderer.render(scene, phy.maincamera);
-    }
+    controls.update(dt);
+    renderer.render(scene, camera);
     time += dt;
 }
 
 
-
+    initGraphics();
     initPhysics();
     {
-        phy.initialize({
-            canvas: window.idcanvas,
-        });
-        phy.makeControl(window.idcanvas);
-
-        phy.ready();
+        //phy.ready();
     }
     createObjects();
     tick();
-    console.log('tick done');
+    console.log('tick done', 'REVISION', THREE.REVISION);
 });
 
 
