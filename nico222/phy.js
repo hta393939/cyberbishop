@@ -83,6 +83,10 @@ var renderer;
 var controls;
 var clock = new THREE.Clock();
 
+var materialDynamic;
+var materialStatic;
+var materialInteractive;
+
 /**
  * var の高さデータ
  */
@@ -399,11 +403,9 @@ class Phy {
  * @param {number} friction 
  */
 function createBox(pos, quat, w, l, h, mass, friction) {
-    var geo = new THREE.BoxBufferGeometry(
+    var shape = new THREE.BoxBufferGeometry(
         w, l, h, 1, 1, 1);
-    const mtl = new THREE.MeshStandardMaterial({
-        color: mass > 0 ? 0xffcccc : 0x999999,
-    });
+    var mtl = mass > 0 ? materialDynamic : materialStatic;
 
     if (!mass) {
         mass = 0;
@@ -412,10 +414,10 @@ function createBox(pos, quat, w, l, h, mass, friction) {
         friction = 1;
     }
 
-    const m = new THREE.Mesh(geo, mtl);
-    m.position.copy(pos);
-    m.quaternion.copy(quat);
-    scene.add(m);
+    var mesh = new THREE.Mesh(shape, mtl);
+    mesh.position.copy(pos);
+    mesh.quaternion.copy(quat);
+    scene.add(mesh);
 
 // TODO: ▽
     var geometry = new Ammo.btBoxShape(bt3(
@@ -424,7 +426,7 @@ function createBox(pos, quat, w, l, h, mass, friction) {
         h * 0.5));
     var transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(bt3(pos.x, pos.y, pos.z));
+    transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
     transform.setRotation(btq(quat.x, quat.y, quat.z, quat.w));
     var motionState = new Ammo.btDefaultMotionState(transform);
     var localInertia = bt3(0, 0, 0);
@@ -445,8 +447,8 @@ function createBox(pos, quat, w, l, h, mass, friction) {
                 ms.getWorldTransform(TRANSFORM_AUX);
                 var p = TRANSFORM_AUX.getOrigin();
                 var q = TRANSFORM_AUX.getRotation();
-                m.position.set(p.x(), p.y(), p.z());
-                m.quaternion.set(q.x(), q.y(), q.z(), q.w());
+                mesh.position.set(p.x(), p.y(), p.z());
+                mesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
             }
         }
         syncList.push(sync);
@@ -462,15 +464,16 @@ function createBox(pos, quat, w, l, h, mass, friction) {
  * @returns 
  */
 function createChassisMesh(w, l, h) {
-    const geo = new THREE.BoxBufferGeometry(w, l, h, 1, 1, 1);
+    var  geo = new THREE.BoxBufferGeometry(w, l, h, 1, 1, 1);
     const mtl = new THREE.MeshStandardMaterial({
         color: 0xff0000,
         //wireframe: true,
     });
-    const m = new THREE.Mesh(geo, mtl);
-    m.name = `c${pad(0, 5)}`;
-    scene.add(m);
-    return m;
+    var material = materialInteractive;
+    var mesh = new THREE.Mesh(geo, material);
+    mesh.name = `c${pad(0, 5)}`;
+    scene.add(mesh);
+    return mesh;
 }
 
 
@@ -548,6 +551,16 @@ function initGraphics() {
         const lighthelper = new THREE.CameraHelper(light.shadow.camera);
         //scene.add(lighthelper);
     }
+
+    materialDynamic = new THREE.MeshPhongMaterial({
+        color: 0xfca400
+    });
+    materialStatic = new THREE.MeshPhongMaterial({
+        color: 0x999999
+    });
+    materialInteractive = new THREE.MeshPhongMaterial({
+        color: 0x990000
+    });
 
     window.container.appendChild(renderer.domElement);
 
