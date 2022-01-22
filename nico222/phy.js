@@ -402,7 +402,7 @@ function createBox(pos, quat, w, l, h, mass, friction) {
     var geo = new THREE.BoxBufferGeometry(
         w, l, h, 1, 1, 1);
     const mtl = new THREE.MeshStandardMaterial({
-        color: 0xffcccc,
+        color: mass > 0 ? 0xffcccc : 0x999999,
     });
 
     if (!mass) {
@@ -417,7 +417,8 @@ function createBox(pos, quat, w, l, h, mass, friction) {
     m.quaternion.copy(quat);
     scene.add(m);
 
-    const box = new Ammo.btBoxShape(bt3(
+// TODO: ▽
+    var geometry = new Ammo.btBoxShape(bt3(
         w * 0.5,
         l * 0.5,
         h * 0.5));
@@ -427,19 +428,18 @@ function createBox(pos, quat, w, l, h, mass, friction) {
     transform.setRotation(btq(quat.x, quat.y, quat.z, quat.w));
     var motionState = new Ammo.btDefaultMotionState(transform);
     var localInertia = bt3(0, 0, 0);
-    box.calculateLocalInertia(localInertia);
-    var body = new Ammo.btRigidBody(
-        new Ammo.btRigidBodyConstructionInfo(
-            mass, motionState, box, localInertia)
-    );
+// TODO: ここ ココ ☆
+    geometry.calculateLocalInertia(mass, localInertia);
+    var rbInfo = new Ammo.btRigidBodyConstructionInfo(
+            mass, motionState, geometry, localInertia);
+    var body = new Ammo.btRigidBody(rbInfo);
     body.setFriction(friction);
     //body.setDamping(0, 0);
-// ワールドに追加
     physicsWorld.addRigidBody(body);
 
     if (mass > 0) {
         body.setActivationState(DISABLE_DEACTIVATION);
-        function sync() {
+        function sync(dt) {
             var ms = body.getMotionState();
             if (ms) {
                 ms.getWorldTransform(TRANSFORM_AUX);
@@ -452,7 +452,6 @@ function createBox(pos, quat, w, l, h, mass, friction) {
         syncList.push(sync);
     }
 
-    return m;  
 }
 
 /**
@@ -466,7 +465,7 @@ function createChassisMesh(w, l, h) {
     const geo = new THREE.BoxBufferGeometry(w, l, h, 1, 1, 1);
     const mtl = new THREE.MeshStandardMaterial({
         color: 0xff0000,
-        wireframe: true,
+        //wireframe: true,
     });
     const m = new THREE.Mesh(geo, mtl);
     m.name = `c${pad(0, 5)}`;
@@ -832,7 +831,7 @@ function createVehicle(pos, quat) {
 
         var tm, p, q, i;
         var n = vehicle.getNumWheels();
-        //window.idwheelnumview.textContent = `${n} ${tstr()}`;
+
         for (i = 0; i < n; ++i) {
             vehicle.updateWheelTransform(i, true);
             tm = vehicle.getWheelTransformWS(i);
@@ -848,6 +847,8 @@ function createVehicle(pos, quat) {
         // TODO: 〇
         chassisMesh.position.set(p.x(), p.y(), p.z());
         chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
+
+        window.idwheelnumview.textContent = `${p.y()} ${tstr()}`;
     }
 
     syncList.push(sync);
@@ -878,7 +879,7 @@ function createObjects() {
     }
 
     createVehicle.call({},
-        new THREE.Vector3(0, 4, -20),
+        new THREE.Vector3(0, 4 + 10, -20),
         new THREE.Quaternion(0, 0, 0, 1));
     console.log('createObjects leaves');
 }
