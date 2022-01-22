@@ -689,13 +689,14 @@ function createVehicle(pos, quat) {
   * @default 0.2
   */
          this.wheelWidthFront = 0.2;
- 
-         this.friction = 1000;
-         this.suspensionStiffness = 20.0;
-         this.suspensionDamping = 2.3;
-         this.suspensionCompression = 4.4;
+
+// TODO: ▽
+        var friction = 1000;
+        var suspensionStiffness = 20.0;
+        var suspensionDamping = 2.3;
+        var suspensionCompression = 4.4;
     var suspensionRestLength = 0.6;
-         this.rollInfluence = 0.2;
+        var rollInfluence = 0.2;
  
          this.steeringIncrement = 0.04;
          this.steeringClamp = 0.5;
@@ -779,12 +780,14 @@ function createVehicle(pos, quat) {
             tuning,
             isFront,
         );
-        wheelInfo.set_m_suspensionStiffness(this.suspensionStiffness);
-        wheelInfo.set_m_wheelsDampingRelaxation(this.suspensionDamping);
-        wheelInfo.set_m_wheelsDampingCompression(this.suspensionCompression);
-        wheelInfo.set_m_frictionSlip(this.friction);
-        wheelInfo.set_m_rollInfluence(this.rollInfluence);
-// TODO: 
+
+// TODO: ここは割と重要 ココ ☆
+        wheelInfo.set_m_suspensionStiffness(suspensionStiffness);
+        wheelInfo.set_m_wheelsDampingRelaxation(suspensionDamping);
+        wheelInfo.set_m_wheelsDampingCompression(suspensionCompression);
+        wheelInfo.set_m_frictionSlip(friction);
+        wheelInfo.set_m_rollInfluence(rollInfluence);
+
         wheelMeshes[index] = createWheelMesh(radius, width, index);
     }
 
@@ -824,8 +827,9 @@ function createVehicle(pos, quat) {
         breakingForce = 0;
         engineForce = 0;
 
-        if (false) {
-
+        if (true) {
+            //engineForce = this.maxEngineForce;
+            engineForce = 1000;
         }
         if (false) {
 
