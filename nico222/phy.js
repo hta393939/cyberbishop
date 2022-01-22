@@ -633,12 +633,12 @@ function createVehicle(pos, quat) {
  * シャーシの幅
  * @default 1.8
  */
-    this.chassisWidth = 1.8;
+    var chassisWidth = 1.8;
  /**
   * Y
   * @default 0.6
   */
-         this.chassisHeight = 0.6;
+        var chassisHeight = 0.6;
  /**
   * 後輪軸Z
   * @default -1
@@ -682,7 +682,7 @@ function createVehicle(pos, quat) {
          this.suspensionStiffness = 20.0;
          this.suspensionDamping = 2.3;
          this.suspensionCompression = 4.4;
-         this.suspensionRestLength = 0.6;
+    var suspensionRestLength = 0.6;
          this.rollInfluence = 0.2;
  
          this.steeringIncrement = 0.04;
@@ -696,8 +696,8 @@ function createVehicle(pos, quat) {
 
     // Chassis
     var geometry = new Ammo.btBoxShape(
-        new Ammo.btVector3(this.chassisWidth * 0.5,
-            this.chassisHeight * 0.5,
+        new Ammo.btVector3(chassisWidth * 0.5,
+            chassisHeight * 0.5,
             chassisLength * 0.5));
     var transform = new Ammo.btTransform();
     transform.setIdentity();
@@ -713,8 +713,8 @@ function createVehicle(pos, quat) {
     body.setActivationState(DISABLE_DEACTIVATION);
     physicsWorld.addRigidBody(body);
     var chassisMesh = createChassisMesh(
-        this.chassisWidth,
-        this.chassisHeight,
+        chassisWidth,
+        chassisHeight,
         chassisLength,
     );
 
@@ -731,17 +731,19 @@ function createVehicle(pos, quat) {
     vehicle.setCoordinateSystem(0, 1, 2);
     physicsWorld.addAction(vehicle);
 
-    this.FRONT_LEFT = 0;
-    this.FRONT_RIGHT = 1;
-    this.BACK_LEFT = 2;
-    this.BACK_RIGHT = 3;
+    var FRONT_LEFT = 0;
+    var FRONT_RIGHT = 1;
+    var BACK_LEFT = 2;
+    var BACK_RIGHT = 3;
 /**
  * 車輪を保持する
  */
     var wheelMeshes = [];
 
-    this.wheelDirectionCS0 = bt3(0, -1, 0);
-    this.wheelAxleCS = bt3(-1, 0, 0);
+// ▽ この辺;;
+    var wheelDirectionCS0 = bt3(0, -1, 0);
+// ▽ この辺;;
+    var wheelAxleCS = bt3(-1, 0, 0);
 
 /**
 * 物理とメッシュでホイールを追加する
@@ -757,9 +759,9 @@ function createVehicle(pos, quat) {
 
         var wheelInfo = vehicle.addWheel(
             pos,
-            this.wheelDirectionCS0,
-            this.wheelAxleCS,
-            this.suspensionRestLength,
+            wheelDirectionCS0,
+            wheelAxleCS,
+            suspensionRestLength,
             radius,
             // ◇
             tuning,
@@ -780,14 +782,14 @@ function createVehicle(pos, quat) {
             this.wheelAxisFrontPosition),
         this.wheelRadiusFront,
         this.wheelWidthFront,
-        this.FRONT_LEFT);
+        FRONT_LEFT);
     addWheel(true,
         new Ammo.btVector3(-this.wheelHalfTrackFront,
             this.wheelAxisHeightFront,
             this.wheelAxisFrontPosition),
         this.wheelRadiusFront,
         this.wheelWidthFront,
-        this.FRONT_RIGHT);
+        FRONT_RIGHT);
 
     addWheel(false,
         new Ammo.btVector3(this.wheelHalfTrackBack,
@@ -795,14 +797,14 @@ function createVehicle(pos, quat) {
             this.wheelAxisPositionBack),
         this.wheelRadiusBack,
         this.wheelWidthBack,
-        this.BACK_LEFT);
+        BACK_LEFT);
     addWheel(false,
         new Ammo.btVector3(-this.wheelHalfTrackBack,
             this.wheelAxisHeightBack,
             this.wheelAxisPositionBack),
         this.wheelRadiusBack,
         this.wheelWidthBack,
-        this.BACK_RIGHT);
+        BACK_RIGHT);
 
     function sync(dt) {
         //const speed = vehicle.getCurrentSpeedKmHour();
@@ -817,28 +819,25 @@ function createVehicle(pos, quat) {
 
         }
 
-        vehicle.applyEngineForce(engineForce, this.BACK_LEFT);
-        vehicle.applyEngineForce(engineForce, this.BACK_RIGHT);
+        vehicle.applyEngineForce(engineForce, BACK_LEFT);
+        vehicle.applyEngineForce(engineForce, BACK_RIGHT);
 
-        vehicle.setBrake(breakingForce / 2, this.FRONT_LEFT);
-        vehicle.setBrake(breakingForce / 2, this.FRONT_RIGHT);
-        vehicle.setBrake(breakingForce, this.BACK_LEFT);
-        vehicle.setBrake(breakingForce, this.BACK_RIGHT);
+        vehicle.setBrake(breakingForce / 2, FRONT_LEFT);
+        vehicle.setBrake(breakingForce / 2, FRONT_RIGHT);
+        vehicle.setBrake(breakingForce, BACK_LEFT);
+        vehicle.setBrake(breakingForce, BACK_RIGHT);
 
-        vehicle.setSteeringValue(vehicleSteering, this.FRONT_LEFT);
-        vehicle.setSteeringValue(vehicleSteering, this.FRONT_RIGHT);
+        vehicle.setSteeringValue(vehicleSteering, FRONT_LEFT);
+        vehicle.setSteeringValue(vehicleSteering, FRONT_RIGHT);
 
-        const n = vehicle.getNumWheels();
-        window.idwheelnumview.textContent = `${n} ${tstr()}`;
-
-// TODO: var
-        var tm, p, q;
-        for (let i = 0; i < n; ++i) {
+        var tm, p, q, i;
+        var n = vehicle.getNumWheels();
+        //window.idwheelnumview.textContent = `${n} ${tstr()}`;
+        for (i = 0; i < n; ++i) {
             vehicle.updateWheelTransform(i, true);
             tm = vehicle.getWheelTransformWS(i);
             p = tm.getOrigin();
             q = tm.getRotation();
-            // TODO: 〇
             wheelMeshes[i].position.set(p.x(), p.y(), p.z());
             wheelMeshes[i].quaternion.set(q.x(), q.y(), q.z(), q.w());
         }
