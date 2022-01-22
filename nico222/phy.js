@@ -312,10 +312,6 @@ class Phy extends EventTarget {
         this.renderer = renderer;
 
         renderer.setSize(w, h, false);
-        const hour = new Date().getHours();
-        const night = (hour >= 23 || hour < 5);
-        //const night = true;
-        //renderer.setClearColor(night ? 0xffee00 : 0xeeffff, 1.0);
         renderer.setClearColor(0x333366, 1.0);
 
         renderer.shadowMap.enabled = true;
@@ -323,10 +319,6 @@ class Phy extends EventTarget {
         const mainscene = new THREE.Scene();
         this.mainscene = mainscene;
         scene = mainscene;
-        {
-            //const axes = new THREE.AxesHelper(100);
-            //mainscene.add(axes);
-        }
 
         const maincamera = new THREE.PerspectiveCamera(45,
             w / h, 0.02, 1000);
@@ -337,13 +329,13 @@ class Phy extends EventTarget {
 
         {
             const axes = new THREE.AxesHelper(10);
-            mainscene.add(axes);
+            scene.add(axes);
         }
 
         { // 顔暗くなる
             let lv = Math.floor(this.amblevel * 255);
             const light = new THREE.AmbientLight((lv << 16) | (lv << 8) | lv);
-            mainscene.add(light);
+            scene.add(light);
         }
         {
             let lv = Math.floor(this.difflevel * 255);
@@ -357,16 +349,16 @@ class Phy extends EventTarget {
             //light.shadow.camera.right = 100;
             //light.shadow.camera.top = -100;
             //light.shadow.camera.bottom = 100;
-            //mainscene.add(light.target);
+            //scene.add(light.target);
 
             light.position.set(-10, 10, 10);
-            mainscene.add(light);
+            scene.add(light);
 
             const helper = new THREE.DirectionalLightHelper(light);
-            //mainscene.add(helper);
+            //scene.add(helper);
 
             const lighthelper = new THREE.CameraHelper(light.shadow.camera);
-            //mainscene.add(lighthelper);
+            //scene.add(lighthelper);
         }
 
         console.log(this.name, 'initGL leaves');
