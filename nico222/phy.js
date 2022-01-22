@@ -71,7 +71,7 @@ const bt2q = (a) => {
 
 //var DISABLE_DEACTIVATION = 4;
 
-
+var scene;
 var clock = new THREE.Clock();
 
 /**
@@ -82,7 +82,9 @@ var heightData = null;
  * 物理のメモリ
  */
 var ammoHeightData = null;
-
+/**
+ * グローバルにしないとメモリが尽きる
+ */
 var transformAux1 = null;
 
 /**
@@ -222,7 +224,7 @@ class Car {
         const body = new Ammo.btRigidBody(rbInfo);
         body.setActivationState(DISABLE_DEACTIVATION);
         physicsWorld.addRigidBody(body);
-        const chassisMesh = this.createChassisMesh(
+        var chassisMesh = this.createChassisMesh(
             this.chassisWidth,
             this.chassisHeight,
             this.chassisDepth,
@@ -356,8 +358,8 @@ class Car {
             p = tm.getOrigin();
             q = tm.getRotation();
             // TODO: 〇
-            //this.chassisMesh.position.set(p.x(), p.y(), p.z());
-            //this.chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
+            chassisMesh.position.set(p.x(), p.y(), p.z());
+            chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
         }
 
         syncList.push(sync);
@@ -371,6 +373,7 @@ class Car {
         });
         const m = new THREE.Mesh(geo, mtl);
         m.name = `c${pad(0, 5)}`;
+        scene.add(m);
         return m;
     }
 
@@ -624,6 +627,7 @@ class Phy extends EventTarget {
 
         const mainscene = new THREE.Scene();
         this.mainscene = mainscene;
+        scene = mainscene;
         {
             //const axes = new THREE.AxesHelper(100);
             //mainscene.add(axes);
@@ -803,7 +807,7 @@ class Phy extends EventTarget {
     }
 
     ready() {
-        this.makeGround();
+        /*
         for (let i = 0; i < 10; ++i) {
             const m = this.makeBox(
                 [0.5, 0.5, 0.5],
@@ -812,7 +816,7 @@ class Phy extends EventTarget {
             m.castShadow = true;
             this.mainscene.add(m);
         }
-
+*/
         //return;
         {
             const m = this.makeHeightGround();
@@ -834,75 +838,6 @@ class Phy extends EventTarget {
             physicsWorld.addRigidBody(body);
         }
     }
-
-
-/**
- * API. この関数では自走しない
- */
-    update() {
-
-        const nowts = Date.now();
-        this.ts = this.ts.filter(v => {
-            return (nowts - v) < this.windowmsec;
-        });
-        let fps = 0;
-        let ok = false;
-        const num = this.ts.length;
-        if (num === 0) {
-            ok = true;
-        } else {
-            let diff = nowts - this.ts[num - 1];
-
-            fps = 1000 * num / this.windowmsec;
-            if (fps <= this.targetfps) {
-                ok = true;
-            }
-
-            if (diff > 1000 / (this.targetfps / 2)) {
-                ok = true; // 遅すぎたら常に採用
-            }
-            if (diff < 1000 / (this.targetfps * 2)) {
-                ok = false; // 早すぎたら常に非採用
-            }
-        }
-        ok = true;
-        if (ok) {
-            this.ts.push(nowts);
-
-            window.idfpsview.textContent = `${fps.toFixed(1)} [fps]`;
-        }
-
-        {
-            const el = window.idtimeview;
-            el.textContent = `${this.time.toFixed(1)}`;
-        }
-
-        this.draw();
-
-//        this.status.update();
-    }
-
-
-    /**
-     * 高頻度描画
-     */
-    draw() {
-
-        const nowts = Date.now();
-        let diff = 0;
-        if (this.prets) {
-            diff = nowts - this.prets;
-        }
-        this.prets = nowts;
-
-        const deltaTime = clock.getDelta();
-
-        if (this.renderer) {
-            this.renderer.render(this.mainscene, this.maincamera);
-        }
-    }
-
-
 
 /**
  * API. 初期化する
@@ -926,80 +861,6 @@ class Phy extends EventTarget {
 
         console.log(this.name, 'initialize leaves');
     }
-
-
-
-/**
- * 床を作る
- */
-    makeGround() {
-        {
-            const m = this.makeBox([20, 1, 20],
-                [0, -2, 0], 0,
-                { color: 0x333333 });
-            m.receiveShadow = true;
-            this.mainscene.add(m);
-        }
-    }
-
-/**
- * 物理とメッシュの箱を作る
- * @param {number[]} sides 3要素で辺の長さ
- * @param {number[]} pos 3要素
- * @param {number} mass 質量
- */
-    makeBox(sides, pos, mass, inopt = {}) {
-        {
-            const geo = new THREE.BoxBufferGeometry(
-                ...sides);
-            const mtl = new THREE.MeshStandardMaterial({
-                color: inopt.color ?? 0xffcccc,
-            });
-            const m = new THREE.Mesh(geo, mtl);
-
-            const box = new Ammo.btBoxShape(bt3(
-                sides[0] * 0.5,
-                sides[1] * 0.5,
-                sides[2] * 0.5));
-            const transform = new Ammo.btTransform();
-            transform.setIdentity();
-            transform.setOrigin(bt3(...pos));
-            //transform.setRotation(btq(0.1, 0, 0, 0.9));
-            const motionState = new Ammo.btDefaultMotionState(transform);
-            const localInertia = bt3(0, 0, 0);
-            box.calculateLocalInertia(localInertia);
-            const body = new Ammo.btRigidBody(
-                new Ammo.btRigidBodyConstructionInfo(
-                    mass, motionState, box, localInertia)
-            );
-            body.setFriction(0);
-            body.setDamping(0, 0);
-// ワールドに追加
-            physicsWorld.addRigidBody(body);
-
-            m.userData.rigidbody = body;
-
-            if (mass > 0) {
-            //{
-                body.setActivationState(DISABLE_DEACTIVATION);
-
-                m.userData.syncfunc = () => {
-                    const ms = body.getMotionState();
-                    if (ms) {
-                        // TODO: var
-                        ms.getWorldTransform(transformAux1);
-                        const p = transformAux1.getOrigin();
-                        const q = transformAux1.getRotation();
-                        m.position.set(p.x(), p.y(), p.z());
-                        m.quaternion.set(q.x(), q.y(), q.z(), q.w());
-                    }
-                };
-            }
-
-            return m;
-        }
-    }
-
 
 
 }
@@ -1074,36 +935,6 @@ class Misc {
         //this.drawing = new Draw();
     }
 
-/**
- * 高頻度に更新する
- */
-    update() {
-        requestAnimationFrame(() => {
-            this.update();
-        });
-
-        const nowts = Date.now();
-        let diff = 0;
-        if (this.prets) {
-            diff = nowts - this.prets;
-        }
-        this.prets = nowts;
-        this.tscum += diff;
-
-        if (this.analog) {
-            this.analog.updateStatus();
-        }
-
-        //if (this.drawing) {
-            //this.drawing.update();
-            //this.drawing.draw();
-        //}
-
-        if (this.phy) {
-            this.phy.update();
-        }
-    }
-
     /**
      * 816x624(RPGツクールMVデフォルト設定)、 624x816、"768x432"
      * @param {number} inw 
@@ -1170,7 +1001,6 @@ class Misc {
             phy.ready();
         }
 
-        this.update();
     }
 
     checkSize() {
@@ -1343,6 +1173,56 @@ class Misc {
 
 }
 
+function createBox(pos, quat, w, l, h, mass, friction) {
+    const geo = new THREE.BoxBufferGeometry(
+        w, l, h);
+    const mtl = new THREE.MeshStandardMaterial({
+        color: 0xffcccc,
+    });
+    const m = new THREE.Mesh(geo, mtl);
+    scene.add(m);
+
+    const box = new Ammo.btBoxShape(bt3(
+        w * 0.5,
+        l * 0.5,
+        h * 0.5));
+    const transform = new Ammo.btTransform();
+    transform.setIdentity();
+    transform.setOrigin(bt3(pos.x, pos.y, pos.z));
+    //transform.setRotation(btq(0.1, 0, 0, 0.9));
+    const motionState = new Ammo.btDefaultMotionState(transform);
+    const localInertia = bt3(0, 0, 0);
+    box.calculateLocalInertia(localInertia);
+    const body = new Ammo.btRigidBody(
+        new Ammo.btRigidBodyConstructionInfo(
+            mass, motionState, box, localInertia)
+    );
+    body.setFriction(0);
+    body.setDamping(0, 0);
+// ワールドに追加
+    physicsWorld.addRigidBody(body);
+
+    if (mass > 0) {
+    //{
+        body.setActivationState(DISABLE_DEACTIVATION);
+
+        function sync() {
+            const ms = body.getMotionState();
+            if (ms) {
+                // TODO: var
+                ms.getWorldTransform(transformAux1);
+                const p = transformAux1.getOrigin();
+                const q = transformAux1.getRotation();
+                m.position.set(p.x(), p.y(), p.z());
+                m.quaternion.set(q.x(), q.y(), q.z(), q.w());
+            }
+        }
+        syncList.push(sync);
+    }
+
+    return m;  
+}
+
 
 /**
  * 物理演算の共通初期化
@@ -1365,7 +1245,27 @@ function initPhysics() {
 
 
 function createObjects() {
+    console.log('createObjects called');
 
+    createBox(new THREE.Vector3(0, -0.5, 0),
+        new THREE.Quaternion(0, 0, 0, 1),
+        75, 1, 75,
+        0, 2);
+
+    var size = 0.75;
+    var nw = 8;
+    var nh = 7;
+    for (let j = 0; j < nw; ++j) {
+        for (let i = 0; i < nh; ++i) {
+            createBox(new THREE.Vector3(size * j - (size * (nw - 1)) / 2, size * i, 10),
+                new THREE.Quaternion(0, 0, 0, 1),
+                size, size, size,
+                10);
+        }
+    }
+
+//    createVehicle();
+    console.log('createObjects leaves');
 }
 
 const misc = new Misc();
@@ -1381,6 +1281,9 @@ function tick() {
     if (misc?.phy?.control) {
         misc.phy.control.update();
     }
+    if (misc.phy.renderer) {
+        misc.phy.renderer.render(scene, misc.phy.maincamera);
+    }
     time += dt;
 }
 
@@ -1392,6 +1295,7 @@ function tick() {
     misc.initialize();
     createObjects();
     tick();
+    console.log('tick done');
 });
 
 
