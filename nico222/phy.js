@@ -69,7 +69,6 @@ const bt2q = (a) => {
 };
 
 
-//var DISABLE_DEACTIVATION = 4;
 
 var scene;
 var clock = new THREE.Clock();
@@ -116,14 +115,6 @@ class Car {
  */
     constructor() {
         this.name = this.constructor.name;
-
-        this.syncList = [];
-/**
- * @type {THREE.Mesh}
- */
-        this.chassisMesh = null;
-        this.tempTrans = new Ammo.btTransform();
-
 /**
  * シャーシの幅
  * @default 1.8
@@ -198,302 +189,6 @@ class Car {
         this.maxBreakingForce = 100;
     }
 
-/**
- * 〇 これを使う．Car インスタンスを初期化する
- * @param {Ammo.btDynamicPhysicsWorld}
- */
-    init() {
-        console.log(this.name, 'init called');
-// 
-        const pos = new THREE.Vector3(0, 4, -20 + 10);
-
-        // Chassis
-        this.geometry = new Ammo.btBoxShape(
-            bt3(this.chassisWidth * 0.5,
-                this.chassisHeight * 0.5,
-                this.chassisDepth * 0.5));
-        const transform = new Ammo.btTransform();
-        transform.setIdentity();
-        transform.setOrigin(bt3(pos.x, pos.y, pos.z));
-        //transform.setRotation(btq(0, 0, 0, 1));
-        const motionState = new Ammo.btDefaultMotionState(transform);
-        const localInertia = bt3(0, 0, 0);
-        this.geometry.calculateLocalInertia(this.massVehicle, localInertia);
-        const rbInfo = new Ammo.btRigidBodyConstructionInfo(
-            this.massVehicle, motionState, this.geometry, localInertia);
-        const body = new Ammo.btRigidBody(rbInfo);
-        body.setActivationState(DISABLE_DEACTIVATION);
-        physicsWorld.addRigidBody(body);
-        var chassisMesh = this.createChassisMesh(
-            this.chassisWidth,
-            this.chassisHeight,
-            this.chassisDepth,
-        );
-        this.chassisMesh = chassisMesh;
-
-// レイキャストビークル
-        this.engineForce = 0;
-        this.vehicleSteering = 0;
-        this.breakingForce = 0;
-        this.tuning = new Ammo.btVehicleTuning();
-        this.rayCaster = new Ammo.btDefaultVehicleRaycaster(physicsWorld);
-        var vehicle = new Ammo.btRaycastVehicle(
-            this.tuning, this.body, this.rayCaster);
-
-        vehicle.setCoordinateSystem(0, 1, 2);
-        physicsWorld.addAction(vehicle);
-
-        this.FRONT_LEFT = 0;
-        this.FRONT_RIGHT = 1;
-        this.BACK_LEFT = 2;
-        this.BACK_RIGHT = 3;
-/**
- * @type {THREE.Mesh[]}
- */
-        this.wheelMeshes = [null, null, null, null];
-
-        this.wheelDirectionCS0 = bt3(0, -1, 0);
-        this.wheelAxleCS = bt3(-1, 0, 0);
-
-/**
- * 物理とメッシュでホイールを追加する
- * @param {boolean} isFront 前輪かどうか
- * @param {Ammo.btVector3} pos 
- * @param {*} radius 半径
- * @param {number} width 幅
- * @param {number} index 0からのインデックス
- */
-//        function addWheel(isFront, pos, radius, width, index) {
-        const addWheel = (isFront, pos, radius, width, index) => {
-            console.log(this.name, 'addWheel called', index);
-
-            const wheelInfo = vehicle.addWheel(
-                pos,
-                this.wheelDirectionCS0,
-                this.wheelAxleCS,
-                this.suspensionRestLength,
-                radius,
-                this.tuning,
-                isFront,
-            );
-            wheelInfo.set_m_suspensionStiffness(this.suspensionStiffness);
-            wheelInfo.set_m_wheelsDampingRelaxation(this.suspensionDamping);
-            wheelInfo.set_m_wheelsDampingCompression(this.suspensionCompression);
-            wheelInfo.set_m_frictionSlip(this.friction);
-            wheelInfo.set_m_rollInfluence(this.rollInfluence);
-
-            this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
-        }
-
-        addWheel(true,
-            bt3(this.wheelHalfTrackFront,
-                this.wheelAxisHeightFront,
-                this.wheelAxisFrontPosition),
-            this.wheelRadiusFront,
-            this.wheelWidthFront,
-            this.FRONT_LEFT);
-        addWheel(true,
-            bt3(-this.wheelHalfTrackFront,
-                this.wheelAxisHeightFront,
-                this.wheelAxisFrontPosition),
-            this.wheelRadiusFront,
-            this.wheelWidthFront,
-            this.FRONT_RIGHT);
-
-        addWheel(false,
-            bt3(this.wheelHalfTrackBack,
-                this.wheelAxisHeightBack,
-                this.wheelAxisPositionBack),
-            this.wheelRadiusBack,
-            this.wheelWidthBack,
-            this.BACK_LEFT);
-        addWheel(false,
-            bt3(-this.wheelHalfTrackBack,
-                this.wheelAxisHeightBack,
-                this.wheelAxisPositionBack),
-            this.wheelRadiusBack,
-            this.wheelWidthBack,
-            this.BACK_RIGHT);
-
-        function sync(dt) {
-            const speed = vehicle.getCurrentSpeedKmHour();
-    
-            this.breakingForce = 0;
-            this.engineForce = 0;
-    
-            if (false) {
-    
-            }
-            if (false) {
-    
-            }
-    /*
-            vehicle.applyEngineForce(this.engineForce, this.BACK_LEFT);
-            vehicle.applyEngineForce(this.engineForce, this.BACK_RIGHT);
-    
-            vehicle.setBrake(this.breakingForce / 2, this.FRONT_LEFT);
-            vehicle.setBrake(this.breakingForce / 2, this.FRONT_RIGHT);
-            vehicle.setBrake(this.breakingForce, this.BACK_LEFT);
-            vehicle.setBrake(this.breakingForce, this.BACK_RIGHT);
-    
-            vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_LEFT);
-            vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_RIGHT);
-    */      
-            const n = vehicle.getNumWheels();
-            window.idwheelnumview.textContent = `${n} ${tstr()}`;
-    
-    // TODO: var
-            var tm, p, q;
-            for (let i = 0; i < n; ++i) {
-                vehicle.updateWheelTransform(i, true);
-                tm = vehicle.getWheelTransformWS(i);
-                p = tm.getOrigin();
-                q = tm.getRotation();
-                // TODO: 〇
-//                this.wheelMeshes[i].position.set(p.x(), p.y(), p.z());
-//                this.wheelMeshes[i].quaternion.copy(bt2q(q));
-            }
-    
-            tm = vehicle.getChassisWorldTransform();
-            p = tm.getOrigin();
-            q = tm.getRotation();
-            // TODO: 〇
-            chassisMesh.position.set(p.x(), p.y(), p.z());
-            chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
-        }
-
-        syncList.push(sync);
-    }
-
-    createChassisMesh(w, l, h) {
-        const geo = new THREE.BoxBufferGeometry(w, l, h, 1, 1, 1);
-        const mtl = new THREE.MeshStandardMaterial({
-            color: 0xff0000,
-            wireframe: true,
-        });
-        const m = new THREE.Mesh(geo, mtl);
-        m.name = `c${pad(0, 5)}`;
-        scene.add(m);
-        return m;
-    }
-
-/**
- * 物理とメッシュでホイールを追加する
- * @param {boolean} isFront 前輪かどうか
- * @param {Ammo.btVector3} pos 
- * @param {*} radius 半径
- * @param {number} width 幅
- * @param {number} index 0からのインデックス
- */
-    addWheel(isFront, pos, radius, width, index) {
-        console.log(this.name, 'addWheel called', index);
-
-        const wheelInfo = this.vehicle.addWheel(
-            pos,
-            this.wheelDirectionCS0,
-            this.wheelAxleCS,
-            this.suspensionRestLength,
-            radius,
-            this.tuning,
-            isFront,
-        );
-        wheelInfo.set_m_suspensionStiffness(this.suspensionStiffness);
-        wheelInfo.set_m_wheelsDampingRelaxation(this.suspensionDamping);
-        wheelInfo.set_m_wheelsDampingCompression(this.suspensionCompression);
-        wheelInfo.set_m_frictionSlip(this.friction);
-        wheelInfo.set_m_rollInfluence(this.rollInfluence);
-
-        this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
-    }
-
-/**
- * 物理演算の結果をメッシュに反映する
- * @param {number} dt 
- */
-    sync(dt) {
-        const vehicle = this.vehicle;
-        if (!vehicle) {
-            //return;
-        }
-
-        const speed = vehicle.getCurrentSpeedKmHour();
-
-        this.breakingForce = 0;
-        this.engineForce = 0;
-
-        if (false) {
-
-        }
-        if (false) {
-
-        }
-/*
-        vehicle.applyEngineForce(this.engineForce, this.BACK_LEFT);
-        vehicle.applyEngineForce(this.engineForce, this.BACK_RIGHT);
-
-        vehicle.setBrake(this.breakingForce / 2, this.FRONT_LEFT);
-        vehicle.setBrake(this.breakingForce / 2, this.FRONT_RIGHT);
-        vehicle.setBrake(this.breakingForce, this.BACK_LEFT);
-        vehicle.setBrake(this.breakingForce, this.BACK_RIGHT);
-
-        vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_LEFT);
-        vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_RIGHT);
-*/      
-        const n = vehicle.getNumWheels();
-        window.idwheelnumview.textContent = `${n} ${tstr()}`;
-
-// TODO: var
-        var tm, p, q;
-        for (let i = 0; i < n; ++i) {
-            vehicle.updateWheelTransform(i, true);
-            tm = vehicle.getWheelTransformWS(i);
-            p = tm.getOrigin();
-            q = tm.getRotation();
-            this.wheelMeshes[i].position.set(p.x(), p.y(), p.z());
-            this.wheelMeshes[i].quaternion.copy(bt2q(q));
-        }
-
-        tm = vehicle.getChassisWorldTransform();
-        p = tm.getOrigin();
-        q = tm.getRotation();
-        this.chassisMesh.position.set(p.x(), p.y(), p.z());
-        this.chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
-    }
-
-/**
- * メッシュを作成する
- * @param {number} radius 半径
- * @param {number} width 幅
- * @param {number} index インデックス
- * @returns {THREE.Mesh}
- */
-    createWheelMesh(radius, width, index) {
-        console.log(this.name, 'createWheelMesh called');
-
-        const geo = new THREE.CylinderBufferGeometry(
-            radius, radius, width, 24, 1);
-        geo.rotateZ(Math.PI / 2);
-        const mtl = new THREE.MeshStandardMaterial({
-            color: 0x006600,
-        });
-        const m = new THREE.Mesh(geo, mtl);
-        m.name = `w${pad(index, 5)}`;
-
-        {
-            const mtl2 = new THREE.MeshStandardMaterial({
-                color: 0x00ff00,
-            });
-            const m2 = new THREE.Mesh(new THREE.BoxBufferGeometry(
-                width * 1.5, radius * 0.25, 1, 1, 1), mtl2);
-            m2.name = `a${pad(index, 5)}`;
-
-            m.add(m2);
-        }
-
-        console.log(this.name, 'createWheelMesh leaves');
-        return m;
-    }
-
 }
 
 
@@ -529,7 +224,7 @@ class Phy extends EventTarget {
         };
 
         this.amblevel = 0.8;
-        this.difflevel = 0.8;
+        this.difflevel = 0.6;
 
         /**
          * シーン
@@ -587,11 +282,11 @@ class Phy extends EventTarget {
 /**
  * 高さの最大
  */
-        this.terrainMaxHeight = 8 * 0 + 1;
+        this.terrainMaxHeight = 8 * 0 + 1 - 4;
 /**
  * 高さの最小
  */
-        this.terrainMinHeight = -2;
+        this.terrainMinHeight = -2 - 4;
 
     }
 
@@ -634,7 +329,7 @@ class Phy extends EventTarget {
         }
 
         const maincamera = new THREE.PerspectiveCamera(45,
-            w / h, 0.02, 100);
+            w / h, 0.02, 1000);
         this.maincamera = maincamera;
         let z = 2.7 * 10;
         maincamera.position.set(0, 1.0, z);
@@ -807,20 +502,11 @@ class Phy extends EventTarget {
     }
 
     ready() {
-        /*
-        for (let i = 0; i < 10; ++i) {
-            const m = this.makeBox(
-                [0.5, 0.5, 0.5],
-                [(i - 5) * 0.25, 5 + i, 0],
-                2);
-            m.castShadow = true;
-            this.mainscene.add(m);
-        }
-*/
-        //return;
+        return;
         {
             const m = this.makeHeightGround();
-            this.mainscene.add(m);
+            scene.add(m);
+
 
             const groundShape = this.createTerrainShape(m.userData.heightdata);
             const transform = new Ammo.btTransform();
@@ -845,334 +531,24 @@ class Phy extends EventTarget {
  */
     async initialize(inopt) {
         console.log(this.name, 'initialize called');
-
         this.initGL(inopt.canvas);
-
-        {
-            const car = new Car();
-            this.car = car;
-            car.init(physicsWorld);
-
-            this.mainscene.add(car.chassisMesh);
-            for (const v of car.wheelMeshes) {
-                this.mainscene.add(v);
-            }
-        }
-
         console.log(this.name, 'initialize leaves');
     }
 
-
 }
 
 
-
-class Misc {
-    constructor() {
-        this.inver = `0.3.3`;
-
-        /**
-         * code はボタンでわかる(KeyA)。key は a や A
-         */
-        this.CODE_A = 'KeyA';
-        this.CODE_W = 'KeyW';
-        this.CODE_D = 'KeyD';
-        this.CODE_S = 'KeyS';
-        this.CODE_Z = 'KeyZ';
-        // ok扱いにするか..
-        this.CODE_X = 'KeyX';
-        // キャンセル扱いにするか..
-        this.CODE_C = 'KeyC';
-
-        /**
-         * Chrome Win10 では code も key もこれ
-         */
-        this.CODE_UP = 'ArrowUp';
-        this.CODE_RIGHT = 'ArrowRight';
-        this.CODE_DOWN = 'ArrowDown';
-        this.CODE_LEFT = 'ArrowLeft';
-
-        /**
-         * atsumaru インスタンス
-         */
-        this.ra = null;
 /**
- * アナログパッド
+ * 
+ * @param {THREE.Vector3} pos 
+ * @param {THREE.Quaternion} quat 
+ * @param {number} w 
+ * @param {number} l 
+ * @param {number} h 
+ * @param {number} mass 
+ * @param {number} friction 
+ * @returns 
  */
-        this.analog = null;
-
-        this.stock = {};
-
-/**
- * 論理幅 16:9
- */
-        this.logicw = 768;
-        this.logich = 432;
-
-        /**
-         * ブラウザでのピクセル認識幅
-         */
-        this.curw = + this.logicw;
-        this.curh = + this.logich;
-
-        /**
-         * 累積用の前ts
-         */
-        this.prets = 0;
-        /**
-         * ゲーム累積カウンター
-         */
-        this.tscum = 0;
-        /**
-         * スコアボードは 1
-         */
-        this.boardid = 1;
-        /**
-         * ボード表示中かどうか
-         */
-        this.isboard = false;
-
-        //this.drawing = new Draw();
-    }
-
-    /**
-     * 816x624(RPGツクールMVデフォルト設定)、 624x816、"768x432"
-     * @param {number} inw 
-     * @param {number} inh 
-     */
-    resize(inw, inh) {
-        this.curw = inw;
-        this.curh = inh;
-    }
-
-/**
- * 初期化する
- */
-    async initialize() {
-        {
-            const ra = new RPGAtsumaru();
-            this.ra = ra;
-            ra.initialize();
-        }
-        {
-            const analog = new Analog();
-            this.analog = analog;
-            analog.initialize();
-        }
-
-        if (this.drawing) {
-        this.drawing.addEventListener(this.drawing.EV_DRAW, async ev => {
-            const type = ev.detail.type;
-            if (type === 'display') {
-                this.isboard = true;
-                try {
-                    await this.ra.displayScore(this.boardid);
-                } catch(ec) {
-                    log(`display catch`, ec.message);
-                }
-                console.log(`display succ 閉じられてresolveする`);
-                this.isboard = false;
-            }
-            if (type === 'score') {
-                this.ra.setRecord(this.boardid, ev.detail.score);
-            }
-        });
-        }
-
-        this.checkSize();
-
-        this.setListener();
-
-        if (this.drawing) {
-            this.drawing.initGL(window.idmain);
-
-// スクリーンショット用の関数を登録する
-            this.ra.setSS(this.drawing.getSS.bind(this.drawing));
-        }
-
-        {
-            const phy = new Phy();
-            this.phy = phy;
-            phy.initialize({
-                canvas: window.idcanvas,
-            });
-            phy.makeControl(window.idcanvas);
-
-            phy.ready();
-        }
-
-    }
-
-    checkSize() {
-        const rc = document.body.getClientRects();
-        console.log(`checkSize leave rc`, rc, window);
-    }
-
-    applyCurrent() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        const r = window.devicePixelRatio;
-        console.log(`applyCurrent`, r, w, h, w / h);
-
-        this.resize(w, h);
-
-        if (!this.drawing) {
-            return;
-        }
-        this.drawing.setWH({
-            curw: w,
-            curh: h,
-            devicePixelRatio: r
-        });
-    }
-
-    setListener() {
-        {
-            this.applyCurrent();
-            window.addEventListener('resize', () => {
-                this.applyCurrent();
-            });
-        }
-
-        {
-            /**
-             * @type {HTMLCanvasElement}
-             */
-            //const el = window.idmain;
-            const el = window;
-            el.addEventListener('keydown', ev => {
-                //log(this.isboard, `keydown`, ev);
-                if (this.isboard) {
-                    return;
-                }
-
-                const ks = [
-                    { code: this.CODE_W, key: this.ra.PAD_U },
-                    { code: this.CODE_D, key: this.ra.PAD_R },
-                    { code: this.CODE_S, key: this.ra.PAD_D },
-                    { code: this.CODE_A, key: this.ra.PAD_L },
-                    //{ code: this.CODE_UP, key: this.ra.PAD_U },
-                    //{ code: this.CODE_RIGHT, key: this.ra.PAD_R },
-                    //{ code: this.CODE_DOWN, key: this.ra.PAD_D },
-                    //{ code: this.CODE_LEFT, key: this.ra.PAD_L },
-                    // Xキーでランキングが閉じる気がする...
-                    { code: this.CODE_Z, key: this.ra.PAD_OK },
-                    { code: this.CODE_C, key: this.ra.PAD_CANCEL }
-                ];
-                const found = ks.find(v => {
-                    return v.code === ev.code;
-                });
-                if (found) {
-                    this.pad({ type: this.ra.PAD_KEYDOWN, key: found.key })
-                }
-            });
-        }
-
-        {
-            /**
-             * @type {HTMLCanvasElement}
-             */
-            const cv = window.idmain;
-            if (cv) {
-                cv.addEventListener('pointerdown', ev => {
-                    log(`pointerdown`, ev);
-
-                    if (!this.drawing) {
-                        return;
-                    }
-                    this.drawing.addTouchEffect(ev);
-                });
-                cv.addEventListener('pointermove', ev => {
-
-                });
-                cv.addEventListener('pointerup', ev => {
-                    log('pointerup', ev);
-                });
-            }
-        }
-
-        {
-            const sub = this.ra.subscribe((info) => {
-                this.pad(info);
-            });
-            log(sub);
-        }
-
-        {
-            const el = document.getElementById('idmain');
-            el.addEventListener('dragover', ev => {
-                ev.preventDefault();
-                ev.stopPropagation();
-                ev.dataTransfer.dropEffect = 'copy';
-            });
-            el.addEventListener('drop', ev => {
-                ev.preventDefault();
-                ev.stopPropagation();
-
-                let flag = false;
-                const re = /(?<ext>\..*)$/;
-                const m = re.exec(ev.dataTransfer.files[0].name);
-                if (m) {
-                    if (m.groups.ext.toLowerCase() === '.vrm') {
-                        flag = true;
-                    }
-                }
-                ev.dataTransfer.dropEffect = flag ? 'copy' : 'none';
-                if (flag) {
-                    this.loadFile(ev.dataTransfer.files[0]);
-                }
-            });
-        }
-
-        {
-            const el = window.idlogging;
-            if (el) {
-                el.addEventListener('click', () => {
-                    console.log('logging', this.phy.mainscene.children);
-                });
-            }
-        }
-    }
-
-    /**
-     * ファイルオブジェクトを指定する．ドラッグアンドドロップ時
-     * @param {File} f 
-     */
-    async loadFile(f) {
-        const ab = await f.arrayBuffer();
-        this.stock[f.name] = ab;
-
-        if (!this.drawing) {
-            return;
-        }
-        this.drawing.loadVRM(ab, true, false);
-    }
-
-    pad(info) {
-        //log(info);
-        if (this.isboard) {
-            return;
-        }
-
-        const ks = [this.ra.PAD_U, this.ra.PAD_R, this.ra.PAD_D, this.ra.PAD_L,
-            this.ra.PAD_OK, this.ra.PAD_CANCEL];
-        const types = [null, null, null, null, null, null];
-
-        const index = ks.findIndex(k => {
-            return info.key === k;
-        });
-        if (index >= 0) {
-            types[index] = info.type;
-
-            if (!this.drawing) {
-                return;
-            }
-            this.drawing.input(...types);
-        }
-    }
-
-}
-
 function createBox(pos, quat, w, l, h, mass, friction) {
     const geo = new THREE.BoxBufferGeometry(
         w, l, h);
@@ -1180,6 +556,8 @@ function createBox(pos, quat, w, l, h, mass, friction) {
         color: 0xffcccc,
     });
     const m = new THREE.Mesh(geo, mtl);
+    m.position.copy(pos);
+    m.quaternion.copy(quat);
     scene.add(m);
 
     const box = new Ammo.btBoxShape(bt3(
@@ -1189,7 +567,7 @@ function createBox(pos, quat, w, l, h, mass, friction) {
     const transform = new Ammo.btTransform();
     transform.setIdentity();
     transform.setOrigin(bt3(pos.x, pos.y, pos.z));
-    //transform.setRotation(btq(0.1, 0, 0, 0.9));
+    transform.setRotation(btq(quat.x, quat.y, quat.z, quat.w));
     const motionState = new Ammo.btDefaultMotionState(transform);
     const localInertia = bt3(0, 0, 0);
     box.calculateLocalInertia(localInertia);
@@ -1197,8 +575,8 @@ function createBox(pos, quat, w, l, h, mass, friction) {
         new Ammo.btRigidBodyConstructionInfo(
             mass, motionState, box, localInertia)
     );
-    body.setFriction(0);
-    body.setDamping(0, 0);
+    body.setFriction(friction);
+    //body.setDamping(0, 0);
 // ワールドに追加
     physicsWorld.addRigidBody(body);
 
@@ -1223,6 +601,299 @@ function createBox(pos, quat, w, l, h, mass, friction) {
     return m;  
 }
 
+/**
+ * scene に追加
+ * @param {number} w 
+ * @param {number} l 
+ * @param {number} h 
+ * @returns 
+ */
+function createChassisMesh(w, l, h) {
+    const geo = new THREE.BoxBufferGeometry(w, l, h, 1, 1, 1);
+    const mtl = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+        wireframe: true,
+    });
+    const m = new THREE.Mesh(geo, mtl);
+    m.name = `c${pad(0, 5)}`;
+    scene.add(m);
+    return m;
+}
+
+/**
+ * メッシュを作成する
+ * @param {number} radius 半径
+ * @param {number} width 幅
+ * @param {number} index インデックス
+ * @returns {THREE.Mesh}
+ */
+function createWheelMesh(radius, width, index) {
+    console.log('createWheelMesh called');
+
+    const geo = new THREE.CylinderBufferGeometry(
+        radius, radius, width, 24, 1);
+    geo.rotateZ(Math.PI / 2);
+    const mtl = new THREE.MeshStandardMaterial({
+        color: 0x006600,
+    });
+    const m = new THREE.Mesh(geo, mtl);
+    m.name = `w${pad(index, 5)}`;
+
+    {
+        const mtl2 = new THREE.MeshStandardMaterial({
+            color: 0x00ff00,
+        });
+        const m2 = new THREE.Mesh(new THREE.BoxBufferGeometry(
+            width * 1.5, radius * 0.25, 1, 1, 1), mtl2);
+        m2.name = `a${pad(index, 5)}`;
+
+        m.add(m2);
+    }
+
+    scene.add(m);
+    console.log('createWheelMesh leaves');
+    return m;
+}
+
+function createVehicle(pos, quat) {
+    console.log('createVehicle called');
+
+/**
+ * シャーシの幅
+ * @default 1.8
+ */
+    this.chassisWidth = 1.8;
+ /**
+  * Y
+  * @default 0.6
+  */
+         this.chassisHeight = 0.6;
+         this.chassisLength = 4;
+ /**
+  * シャーシの奥行長さ
+  * @default 4
+  */
+         this.chassisDepth = 4;
+ /**
+  * ビークルの重量
+  * @default 800
+  */
+         this.massVehicle = 800;
+ 
+ /**
+  * 後輪軸Z
+  * @default -1
+  */
+         this.wheelAxisPositionBack = -1;
+ /**
+  * 後輪半径
+  * @default 0.4
+  */
+         this.wheelRadiusBack = 0.4;
+ /**
+  * 後輪幅
+  * @default 0.3
+  */
+         this.wheelWidthBack = 0.3;
+         this.wheelHalfTrackBack = 1;
+ /**
+  * 後輪軸高さY
+  * @default 0.3
+  */
+         this.wheelAxisHeightBack = 0.3;
+ /**
+  * 前輪Z軸
+  * @default 1.7
+  */
+         this.wheelAxisFrontPosition = 1.7;
+         this.wheelHalfTrackFront = 1;
+         this.wheelAxisHeightFront = 0.3;
+ /**
+  * 前輪半径
+  * @default 0.35
+  */
+         this.wheelRadiusFront = 0.35;
+ /**
+  * 前輪幅
+  * @default 0.2
+  */
+         this.wheelWidthFront = 0.2;
+ 
+         this.friction = 1000;
+         this.suspensionStiffness = 20.0;
+         this.suspensionDamping = 2.3;
+         this.suspensionCompression = 4.4;
+         this.suspensionRestLength = 0.6;
+         this.rollInfluence = 0.2;
+ 
+         this.steeringIncrement = 0.04;
+         this.steeringClamp = 0.5;
+         this.maxEngineForce = 2000;
+         this.maxBreakingForce = 100;
+
+    // Chassis
+    this.geometry = new Ammo.btBoxShape(
+        bt3(this.chassisWidth * 0.5,
+            this.chassisHeight * 0.5,
+            this.chassisDepth * 0.5));
+    const transform = new Ammo.btTransform();
+    transform.setIdentity();
+    transform.setOrigin(bt3(pos.x, pos.y, pos.z));
+    transform.setRotation(btq(quat.x, quat.y, quat.z, quat.w));
+    const motionState = new Ammo.btDefaultMotionState(transform);
+    const localInertia = bt3(0, 0, 0);
+    this.geometry.calculateLocalInertia(this.massVehicle, localInertia);
+    const rbInfo = new Ammo.btRigidBodyConstructionInfo(
+        this.massVehicle, motionState, this.geometry, localInertia);
+    const body = new Ammo.btRigidBody(rbInfo);
+    body.setActivationState(DISABLE_DEACTIVATION);
+    physicsWorld.addRigidBody(body);
+    var chassisMesh = createChassisMesh(
+        this.chassisWidth,
+        this.chassisHeight,
+        this.chassisDepth,
+    );
+    this.chassisMesh = chassisMesh;
+
+// レイキャストビークル
+    this.engineForce = 0;
+    this.vehicleSteering = 0;
+    this.breakingForce = 0;
+    this.tuning = new Ammo.btVehicleTuning();
+    this.rayCaster = new Ammo.btDefaultVehicleRaycaster(physicsWorld);
+    var vehicle = new Ammo.btRaycastVehicle(
+        this.tuning, this.body, this.rayCaster);
+
+    vehicle.setCoordinateSystem(0, 1, 2);
+    physicsWorld.addAction(vehicle);
+
+    this.FRONT_LEFT = 0;
+    this.FRONT_RIGHT = 1;
+    this.BACK_LEFT = 2;
+    this.BACK_RIGHT = 3;
+/**
+ * 車輪を保持する
+ */
+    var wheelMeshes = [];
+/**
+* @type {THREE.Mesh[]}
+*/
+    this.wheelMeshes = [null, null, null, null];
+
+    this.wheelDirectionCS0 = bt3(0, -1, 0);
+    this.wheelAxleCS = bt3(-1, 0, 0);
+
+/**
+* 物理とメッシュでホイールを追加する
+* @param {boolean} isFront 前輪かどうか
+* @param {Ammo.btVector3} pos 
+* @param {*} radius 半径
+* @param {number} width 幅
+* @param {number} index 0からのインデックス
+*/
+    function addWheel(isFront, pos, radius, width, index) {
+//    const addWheel = (isFront, pos, radius, width, index) => {
+        console.log(this.name, 'addWheel called', index);
+
+        const wheelInfo = vehicle.addWheel(
+            pos,
+            this.wheelDirectionCS0,
+            this.wheelAxleCS,
+            this.suspensionRestLength,
+            radius,
+            this.tuning,
+            isFront,
+        );
+        wheelInfo.set_m_suspensionStiffness(this.suspensionStiffness);
+        wheelInfo.set_m_wheelsDampingRelaxation(this.suspensionDamping);
+        wheelInfo.set_m_wheelsDampingCompression(this.suspensionCompression);
+        wheelInfo.set_m_frictionSlip(this.friction);
+        wheelInfo.set_m_rollInfluence(this.rollInfluence);
+// TODO: 
+        wheelMeshes[index] = createWheelMesh(radius, width, index);
+    }
+
+    addWheel(true,
+        bt3(this.wheelHalfTrackFront,
+            this.wheelAxisHeightFront,
+            this.wheelAxisFrontPosition),
+        this.wheelRadiusFront,
+        this.wheelWidthFront,
+        this.FRONT_LEFT);
+    addWheel(true,
+        bt3(-this.wheelHalfTrackFront,
+            this.wheelAxisHeightFront,
+            this.wheelAxisFrontPosition),
+        this.wheelRadiusFront,
+        this.wheelWidthFront,
+        this.FRONT_RIGHT);
+
+    addWheel(false,
+        bt3(this.wheelHalfTrackBack,
+            this.wheelAxisHeightBack,
+            this.wheelAxisPositionBack),
+        this.wheelRadiusBack,
+        this.wheelWidthBack,
+        this.BACK_LEFT);
+    addWheel(false,
+        bt3(-this.wheelHalfTrackBack,
+            this.wheelAxisHeightBack,
+            this.wheelAxisPositionBack),
+        this.wheelRadiusBack,
+        this.wheelWidthBack,
+        this.BACK_RIGHT);
+
+    function sync(dt) {
+        const speed = vehicle.getCurrentSpeedKmHour();
+
+        this.breakingForce = 0;
+        this.engineForce = 0;
+
+        if (false) {
+
+        }
+        if (false) {
+
+        }
+
+        vehicle.applyEngineForce(this.engineForce, this.BACK_LEFT);
+        vehicle.applyEngineForce(this.engineForce, this.BACK_RIGHT);
+
+        vehicle.setBrake(this.breakingForce / 2, this.FRONT_LEFT);
+        vehicle.setBrake(this.breakingForce / 2, this.FRONT_RIGHT);
+        vehicle.setBrake(this.breakingForce, this.BACK_LEFT);
+        vehicle.setBrake(this.breakingForce, this.BACK_RIGHT);
+
+        vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_LEFT);
+        vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_RIGHT);
+
+        const n = vehicle.getNumWheels();
+        window.idwheelnumview.textContent = `${n} ${tstr()}`;
+
+// TODO: var
+        var tm, p, q;
+        for (let i = 0; i < n; ++i) {
+            vehicle.updateWheelTransform(i, true);
+            tm = vehicle.getWheelTransformWS(i);
+            p = tm.getOrigin();
+            q = tm.getRotation();
+            // TODO: 〇
+            wheelMeshes[i].position.set(p.x(), p.y(), p.z());
+            wheelMeshes[i].quaternion.set(q.x(), q.y(), q.z(), q.w());
+        }
+
+        tm = vehicle.getChassisWorldTransform();
+        p = tm.getOrigin();
+        q = tm.getRotation();
+        // TODO: 〇
+        chassisMesh.position.set(p.x(), p.y(), p.z());
+        chassisMesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
+    }
+
+    syncList.push(sync);
+}
+
+
 
 /**
  * 物理演算の共通初期化
@@ -1243,6 +914,8 @@ function initPhysics() {
     console.log('initPhysics leaves');
 }
 
+const phy = new Phy();
+
 
 function createObjects() {
     console.log('createObjects called');
@@ -1251,6 +924,10 @@ function createObjects() {
         new THREE.Quaternion(0, 0, 0, 1),
         75, 1, 75,
         0, 2);
+
+        var quaternion = new THREE.Quaternion(0, 0, 0, 1);
+        quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 18);
+        createBox(new THREE.Vector3(0, -1.5, 0), quaternion, 8, 4, 10, 0);
 
     var size = 0.75;
     var nw = 8;
@@ -1264,11 +941,9 @@ function createObjects() {
         }
     }
 
-//    createVehicle();
+    createVehicle.call({}, new THREE.Vector3(0, 4, -20), new THREE.Quaternion(0, 0, 0, 1));
     console.log('createObjects leaves');
 }
-
-const misc = new Misc();
 
 
 function tick() {
@@ -1278,21 +953,26 @@ function tick() {
         syncList[i](dt);
     }
     physicsWorld.stepSimulation(dt, 10);
-    if (misc?.phy?.control) {
-        misc.phy.control.update();
+    if (phy?.control) {
+        phy.control.update();
     }
-    if (misc.phy.renderer) {
-        misc.phy.renderer.render(scene, misc.phy.maincamera);
+    if (phy.renderer) {
+        phy.renderer.render(scene, phy.maincamera);
     }
     time += dt;
 }
 
 
 
-
-
     initPhysics();
-    misc.initialize();
+    {
+        phy.initialize({
+            canvas: window.idcanvas,
+        });
+        phy.makeControl(window.idcanvas);
+
+        phy.ready();
+    }
     createObjects();
     tick();
     console.log('tick done');
