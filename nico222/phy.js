@@ -211,7 +211,7 @@ class Car extends EventTarget {
 
 // レイキャストビークル
         let engineForce = 0;
-        let vehicleSteering = 0;
+        this.vehicleSteering = 0;
         let breakingForce = 0;
         const tuning = new Ammo.btVehicleTuning();
         const rayCaster = new Ammo.btDefaultVehicleRaycaster(this.world);
@@ -318,8 +318,9 @@ const addWheel = (isFront, pos, radius, width, index) => {
             if (false) {
 
             }
-            if (false) {
-
+            if (true) {
+                // + で左?
+                //this.vehicleSteering = 10;
             }
 
             vehicle.applyEngineForce(engineForce, this.BACK_LEFT);
@@ -330,8 +331,8 @@ const addWheel = (isFront, pos, radius, width, index) => {
             vehicle.setBrake(breakingForce, this.BACK_LEFT);
             vehicle.setBrake(breakingForce, this.BACK_RIGHT);
 
-            vehicle.setSteeringValue(vehicleSteering, this.FRONT_LEFT);
-            vehicle.setSteeringValue(vehicleSteering, this.FRONT_RIGHT);
+            vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_LEFT);
+            vehicle.setSteeringValue(this.vehicleSteering, this.FRONT_RIGHT);
             
             const n = vehicle.getNumWheels();
             window.idwheelnumview.textContent = `${n} ${tstr()}`;
@@ -1958,6 +1959,15 @@ class Phy extends EventTarget {
             for (const v of car.wheelMeshes) {
                 this.mainscene.add(v);
             }
+        }
+
+        {
+            window.addEventListener('mousedown', ev => {
+                this.car.vehicleSteering = - (ev.clientX / 768 - 0.5) * 2 * 45 * Math.PI / 180;
+            });
+            window.addEventListener('mouseup', () => {
+                this.car.vehicleSteering = 0;
+            });
         }
 
         console.log(this.name, 'initialize leaves');
