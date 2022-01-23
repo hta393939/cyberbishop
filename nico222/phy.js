@@ -179,6 +179,9 @@ class Car {
         this.geometry.calculateLocalInertia(this.massVehicle, localInertia);
         const rbInfo = new Ammo.btRigidBodyConstructionInfo(
             this.massVehicle, motionState, this.geometry, localInertia);
+/**
+ * シャーシーのボディ
+ */
         const body = new Ammo.btRigidBody(rbInfo);
         body.setActivationState(DISABLE_DEACTIVATION);
         this.world.addRigidBody(body);
@@ -190,15 +193,16 @@ class Car {
         this.chassisMesh = chassisMesh;
 
 // レイキャストビークル
-        this.engineForce = 0;
-        this.vehicleSteering = 0;
-        this.breakingForce = 0;
-        this.tuning = new Ammo.btVehicleTuning();
-        this.rayCaster = new Ammo.btDefaultVehicleRaycaster(this.world);
-        this.vehicle = new Ammo.btRaycastVehicle(
-            this.tuning, this.body, this.rayCaster);
-        this.vehicle.setCoordinateSystem(0, 1, 2);
-        this.world.addAction(this.vehicle);
+        let engineForce = 0;
+        let vehicleSteering = 0;
+        let breakingForce = 0;
+        const tuning = new Ammo.btVehicleTuning();
+        const rayCaster = new Ammo.btDefaultVehicleRaycaster(this.world);
+        const vehicle = new Ammo.btRaycastVehicle(
+            tuning, body, rayCaster);
+        this.vehicle = vehicle;
+        vehicle.setCoordinateSystem(0, 1, 2);
+        this.world.addAction(vehicle);
 
         this.FRONT_LEFT = 0;
         this.FRONT_RIGHT = 1;
@@ -242,7 +246,56 @@ class Car {
             this.wheelWidthBack,
             this.BACK_RIGHT);
 
-        //this.syncList.push(this.sync.bind(this));
+
+/**
+ * 車の物理演算の結果をメッシュに反映する
+ * @param {number} dt 
+ */
+        function sync(dt) {
+            const speed = vehicle.getCurrentSpeedKmHour();
+
+            breakingForce = 0;
+            engineForce = 10;
+
+            if (false) {
+
+            }
+            if (false) {
+
+            }
+
+            vehicle.applyEngineForce(engineForce, this.BACK_LEFT);
+            vehicle.applyEngineForce(engineForce, this.BACK_RIGHT);
+
+            vehicle.setBrake(breakingForce / 2, this.FRONT_LEFT);
+            vehicle.setBrake(breakingForce / 2, this.FRONT_RIGHT);
+            vehicle.setBrake(breakingForce, this.BACK_LEFT);
+            vehicle.setBrake(breakingForce, this.BACK_RIGHT);
+
+            vehicle.setSteeringValue(vehicleSteering, this.FRONT_LEFT);
+            vehicle.setSteeringValue(vehicleSteering, this.FRONT_RIGHT);
+            
+            const n = vehicle.getNumWheels();
+            window.idwheelnumview.textContent = `${n} ${tstr()}`;
+
+            for (let i = 0; i < n; ++i) {
+                vehicle.updateWheelTransform(i, true);
+                const tm = vehicle.getWheelTransformWS(i);
+                const p = tm.getOrigin();
+                const q = tm.getRotation();
+                this.wheelMeshes[i].position.copy(bt2p(p));
+                this.wheelMeshes[i].quaternion.copy(bt2q(q));
+            }
+
+            const tm = vehicle.getChassisWorldTransform();
+            const p = tm.getOrigin();
+            const q = tm.getRotation();
+            this.chassisMesh.position.copy(bt2p(p));
+            this.chassisMesh.quaternion.copy(bt2q(q));
+        }
+
+
+        this.syncList.push(sync.bind(this));
     }
 
     createChassisMesh(w, l, h) {
@@ -267,26 +320,37 @@ class Car {
     addWheel(isFront, pos, radius, width, index) {
         console.log(this.name, 'addWheel called', index);
 
+        const directionCS0 = this.wheelDirectionCS0;
+        const axleCS = this.wheelAxleCS;
+        const suslength = this.suspensionRestLength;
+        const tuning = this.tuning;
+
+        const susstill = this.suspensionStiffness;
+        const susdamp = this.suspensionDamping;
+        const suscomp = this.suspensionCompression;
+        const fric = this.friction;
+        const roll = this.rollInfluence;
+
         const wheelInfo = this.vehicle.addWheel(
             pos,
-            this.wheelDirectionCS0,
-            this.wheelAxleCS,
-            this.suspensionRestLength,
+            directionCS0,
+            axleCS,
+            suslength,
             radius,
-            this.tuning,
+            tuning,
             isFront,
         );
-        wheelInfo.set_m_suspensionStiffness(this.suspensionStiffness);
-        wheelInfo.set_m_wheelsDampingRelaxation(this.suspensionDamping);
-        wheelInfo.set_m_wheelsDampingCompression(this.suspensionCompression);
-        wheelInfo.set_m_frictionSlip(this.friction);
-        wheelInfo.set_m_rollInfluence(this.rollInfluence);
+        wheelInfo.set_m_suspensionStiffness(susstill);
+        wheelInfo.set_m_wheelsDampingRelaxation(susdamp);
+        wheelInfo.set_m_wheelsDampingCompression(suscomp);
+        wheelInfo.set_m_frictionSlip(fric);
+        wheelInfo.set_m_rollInfluence(roll);
 
         this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
     }
 
 /**
- * 物理演算の結果をメッシュに反映する
+ * 車の物理演算の結果をメッシュに反映する
  * @param {number} dt 
  */
     sync(dt) {
@@ -327,14 +391,14 @@ class Car {
             const p = tm.getOrigin();
             const q = tm.getRotation();
             this.wheelMeshes[i].position.copy(bt2p(p));
-            //this.wheelMeshes[i].quaternion.copy(bt2q(q));
+            this.wheelMeshes[i].quaternion.copy(bt2q(q));
         }
 
         const tm = vehicle.getChassisWorldTransform();
         const p = tm.getOrigin();
         const q = tm.getRotation();
         this.chassisMesh.position.copy(bt2p(p));
-        //this.chassisMesh.quaternion.copy(bt2q(q));
+        this.chassisMesh.quaternion.copy(bt2q(q));
     }
 
 /**
