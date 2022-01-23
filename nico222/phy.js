@@ -167,7 +167,7 @@ class Car {
         this.world = inworld;
 
 // 
-        const pos = new THREE.Vector3(0, 4, -20 + 10);
+        const pos = new THREE.Vector3(0, 4, -20 + 15);
 
         this.geometry = new Ammo.btBoxShape();
         const transform = new Ammo.btTransform();
@@ -216,14 +216,56 @@ class Car {
         this.wheelDirectionCS0 = bt3(0, -1, 0);
         this.wheelAxleCS = bt3(-1, 0, 0);
 
-        this.addWheel(true,
+
+/**
+ * 物理とメッシュでホイールを追加する ココ ここ
+ * @param {boolean} isFront 前輪かどうか
+ * @param {Ammo.btVector3} pos 
+ * @param {*} radius 半径
+ * @param {number} width 幅
+ * @param {number} index 0からのインデックス
+ */
+const addWheel = (isFront, pos, radius, width, index) => {
+    console.log('addWheel called', index);
+
+    const directionCS0 = this.wheelDirectionCS0;
+    const axleCS = this.wheelAxleCS;
+    const suslength = this.suspensionRestLength;
+    const tuning = this.tuning;
+
+    const susstill = this.suspensionStiffness;
+    const susdamp = this.suspensionDamping;
+    const suscomp = this.suspensionCompression;
+    const fric = this.friction;
+    const roll = this.rollInfluence;
+
+    const wheelInfo = this.vehicle.addWheel(
+        pos,
+        directionCS0,
+        axleCS,
+        suslength,
+        radius,
+        tuning,
+        isFront,
+    );
+    wheelInfo.set_m_suspensionStiffness(susstill);
+    wheelInfo.set_m_wheelsDampingRelaxation(susdamp);
+    wheelInfo.set_m_wheelsDampingCompression(suscomp);
+    wheelInfo.set_m_frictionSlip(fric);
+    wheelInfo.set_m_rollInfluence(roll);
+
+    this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
+};
+
+
+        addWheel(true,
             bt3(this.wheelHalfTrackFront,
                 this.wheelAxisHeightFront,
                 this.wheelAxisFrontPosition),
             this.wheelRadiusFront,
             this.wheelWidthFront,
             this.FRONT_LEFT);
-        this.addWheel(true,
+        addWheel(true,
             bt3(-this.wheelHalfTrackFront,
                 this.wheelAxisHeightFront,
                 this.wheelAxisFrontPosition),
@@ -231,14 +273,14 @@ class Car {
             this.wheelWidthFront,
             this.FRONT_RIGHT);
 
-        this.addWheel(false,
+        addWheel(false,
             bt3(this.wheelHalfTrackBack,
                 this.wheelAxisHeightBack,
                 this.wheelAxisPositionBack),
             this.wheelRadiusBack,
             this.wheelWidthBack,
             this.BACK_LEFT);
-        this.addWheel(false,
+        addWheel(false,
             bt3(-this.wheelHalfTrackBack,
                 this.wheelAxisHeightBack,
                 this.wheelAxisPositionBack),
@@ -248,7 +290,7 @@ class Car {
 
 
 /**
- * 車の物理演算の結果をメッシュに反映する
+ * 車の物理演算の結果をメッシュに反映する．対処済み．
  * @param {number} dt 
  */
         function sync(dt) {
@@ -278,6 +320,7 @@ class Car {
             const n = vehicle.getNumWheels();
             window.idwheelnumview.textContent = `${n} ${tstr()}`;
 
+            //var tm, p, q, i;
             for (let i = 0; i < n; ++i) {
                 vehicle.updateWheelTransform(i, true);
                 const tm = vehicle.getWheelTransformWS(i);
@@ -292,6 +335,7 @@ class Car {
             const q = tm.getRotation();
             this.chassisMesh.position.copy(bt2p(p));
             this.chassisMesh.quaternion.copy(bt2q(q));
+            window.idy1.textContent = `${p.y().toFixed(1)}`;
         }
 
 
@@ -317,6 +361,7 @@ class Car {
  * @param {number} width 幅
  * @param {number} index 0からのインデックス
  */
+/*
     addWheel(isFront, pos, radius, width, index) {
         console.log(this.name, 'addWheel called', index);
 
@@ -348,11 +393,14 @@ class Car {
 
         this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
     }
+*/
+
 
 /**
  * 車の物理演算の結果をメッシュに反映する
  * @param {number} dt 
  */
+/*
     sync(dt) {
         const vehicle = this.vehicle;
         if (!vehicle) {
@@ -400,6 +448,7 @@ class Car {
         this.chassisMesh.position.copy(bt2p(p));
         this.chassisMesh.quaternion.copy(bt2q(q));
     }
+    */
 
 /**
  * メッシュを作成する
@@ -761,10 +810,10 @@ class Phy extends EventTarget {
         }
 
         const maincamera = new THREE.PerspectiveCamera(45,
-            w / h, 0.02, 100);
+            w / h, 0.2, 2000);
         this.maincamera = maincamera;
         let z = 2.7 * 10;
-        maincamera.position.set(0, 1.0, z);
+        maincamera.position.set(0, 10.0, z);
         maincamera.lookAt(new THREE.Vector3(0, 1.0, 0));
 
         {
@@ -942,7 +991,8 @@ class Phy extends EventTarget {
             const m = this.makeBox(
                 [0.5, 0.5, 0.5],
                 [(i - 5) * 0.25, 5 + i, 0],
-                2);
+                2,
+                { friction: 0.5 });
             m.castShadow = true;
             this.mainscene.add(m);
         }
@@ -1037,8 +1087,11 @@ class Phy extends EventTarget {
             syncfunc(dt);
         });
 
-        if (this.car) {
-            this.car.sync(dt);
+        {
+            const n = this.car.syncList.length;
+            for (let i = 0; i < n; ++i) {
+                this.car.syncList[i](dt);
+            }
         }
 
 // 物理演算のワールドを更新する
@@ -2545,7 +2598,8 @@ class Phy extends EventTarget {
         {
             const m = this.makeBox([20, 1, 20],
                 [0, -2, 0], 0,
-                { color: 0x333333 });
+                { color: 0x333333 },
+                { friction: 0.5 });
             m.receiveShadow = true;
             this.mainscene.add(m);
         }
@@ -2556,6 +2610,7 @@ class Phy extends EventTarget {
  * @param {number[]} sides 3要素で辺の長さ
  * @param {number[]} pos 3要素
  * @param {number} mass 質量
+ * @param {{ friction: number }} inopt 
  */
     makeBox(sides, pos, mass, inopt = {}) {
         {
@@ -2573,16 +2628,15 @@ class Phy extends EventTarget {
             const transform = new Ammo.btTransform();
             transform.setIdentity();
             transform.setOrigin(bt3(...pos));
-            //transform.setRotation(btq(0.1, 0, 0, 0.9));
+            transform.setRotation(btq(0, 0, 0, 1));
             const motionState = new Ammo.btDefaultMotionState(transform);
             const localInertia = bt3(0, 0, 0);
-            box.calculateLocalInertia(localInertia);
-            const body = new Ammo.btRigidBody(
-                new Ammo.btRigidBodyConstructionInfo(
-                    mass, motionState, box, localInertia)
-            );
-            body.setFriction(0);
-            body.setDamping(0, 0);
+            box.calculateLocalInertia(mass, localInertia);
+            const rbInfo = new Ammo.btRigidBodyConstructionInfo(
+                    mass, motionState, box, localInertia);
+            const body = new Ammo.btRigidBody(rbInfo);
+            body.setFriction(inopt.friction);
+            //body.setDamping(0, 0);
 // ワールドに追加
             this.world.addRigidBody(body);
 
