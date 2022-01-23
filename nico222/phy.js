@@ -213,33 +213,33 @@ class Car {
  */
         this.wheelMeshes = [null, null, null, null];
 
-        this.wheelDirectionCS0 = bt3(0, -1, 0);
-        this.wheelAxleCS = bt3(-1, 0, 0);
+//        this.wheelDirectionCS0 = bt3(0, -1, 0);
+//        this.wheelAxleCS = bt3(-1, 0, 0);
 
 
 /**
  * 物理とメッシュでホイールを追加する ココ ここ
  * @param {boolean} isFront 前輪かどうか
  * @param {Ammo.btVector3} pos 
- * @param {*} radius 半径
+ * @param {number} radius 半径
  * @param {number} width 幅
  * @param {number} index 0からのインデックス
  */
-const addWheel = (isFront, pos, radius, width, index) => {
+function addWheel(isFront, pos, radius, width, index) {
     console.log('addWheel called', index);
 
-    const directionCS0 = this.wheelDirectionCS0;
-    const axleCS = this.wheelAxleCS;
-    const suslength = this.suspensionRestLength;
-    const tuning = this.tuning;
+    let directionCS0 = bt3(0, -1, 0);
+    let axleCS = bt3(-1, 0, 0);
+    let suslength = 0.6;
+//    const tuning = this.tuning;
 
-    const susstill = this.suspensionStiffness;
-    const susdamp = this.suspensionDamping;
-    const suscomp = this.suspensionCompression;
-    const fric = this.friction;
-    const roll = this.rollInfluence;
+    let susstill = 20.0;
+    let susdamp = 2.3;
+    let suscomp = 4.4;
+    let fric = 1000;
+    let roll = 0.2;
 
-    const wheelInfo = this.vehicle.addWheel(
+    const wheelInfo = vehicle.addWheel(
         pos,
         directionCS0,
         axleCS,
@@ -254,8 +254,8 @@ const addWheel = (isFront, pos, radius, width, index) => {
     wheelInfo.set_m_frictionSlip(fric);
     wheelInfo.set_m_rollInfluence(roll);
 
-    this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
-};
+//    this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
+}
 
 
         addWheel(true,
@@ -288,13 +288,21 @@ const addWheel = (isFront, pos, radius, width, index) => {
             this.wheelWidthBack,
             this.BACK_RIGHT);
 
+        for (let i = 0; i < 4; ++i) {
+            let index = i;
+            this.wheelMeshes[index] = this.createWheelMesh(
+                this.wheelRadiusBack,
+                this.wheelWidthBack,
+                index);
+        }
+
 
 /**
  * 車の物理演算の結果をメッシュに反映する．対処済み．
  * @param {number} dt 
  */
         function sync(dt) {
-            const speed = vehicle.getCurrentSpeedKmHour();
+            //const speed = vehicle.getCurrentSpeedKmHour();
 
             breakingForce = 0;
             engineForce = 10;
@@ -320,19 +328,19 @@ const addWheel = (isFront, pos, radius, width, index) => {
             const n = vehicle.getNumWheels();
             window.idwheelnumview.textContent = `${n} ${tstr()}`;
 
-            //var tm, p, q, i;
-            for (let i = 0; i < n; ++i) {
+            let tm, p, q, i;
+            for (i = 0; i < n; ++i) {
                 vehicle.updateWheelTransform(i, true);
-                const tm = vehicle.getWheelTransformWS(i);
-                const p = tm.getOrigin();
-                const q = tm.getRotation();
+                tm = vehicle.getWheelTransformWS(i);
+                p = tm.getOrigin();
+                q = tm.getRotation();
                 this.wheelMeshes[i].position.copy(bt2p(p));
                 this.wheelMeshes[i].quaternion.copy(bt2q(q));
             }
 
-            const tm = vehicle.getChassisWorldTransform();
-            const p = tm.getOrigin();
-            const q = tm.getRotation();
+            tm = vehicle.getChassisWorldTransform();
+            p = tm.getOrigin();
+            q = tm.getRotation();
             this.chassisMesh.position.copy(bt2p(p));
             this.chassisMesh.quaternion.copy(bt2q(q));
             window.idy1.textContent = `${p.y().toFixed(1)}`;
@@ -997,7 +1005,7 @@ class Phy extends EventTarget {
             this.mainscene.add(m);
         }
 
-        //return;
+        return;
         {
             const m = this.makeHeightGround();
             this.mainscene.add(m);
@@ -2620,6 +2628,7 @@ class Phy extends EventTarget {
                 color: inopt.color ?? 0xffcccc,
             });
             const m = new THREE.Mesh(geo, mtl);
+            m.position.set(...pos);
 
             const box = new Ammo.btBoxShape(bt3(
                 sides[0] * 0.5,
@@ -2646,12 +2655,14 @@ class Phy extends EventTarget {
             //{
                 body.setActivationState(DISABLE_DEACTIVATION);
 
+                let TRANSFORM_AUX = new Ammo.btTransform();
+
                 m.userData.syncfunc = () => {
                     const ms = body.getMotionState();
                     if (ms) {
-                        ms.getWorldTransform(this.tempTrans);
-                        const p = this.tempTrans.getOrigin();
-                        const q = this.tempTrans.getRotation();
+                        ms.getWorldTransform(TRANSFORM_AUX);
+                        const p = TRANSFORM_AUX.getOrigin();
+                        const q = TRANSFORM_AUX.getRotation();
                         m.position.set(p.x(), p.y(), p.z());
                         m.quaternion.set(q.x(), q.y(), q.z(), q.w());
                     }
