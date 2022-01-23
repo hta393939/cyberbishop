@@ -168,17 +168,22 @@ class Car {
 
 // 
         const pos = new THREE.Vector3(0, 4, -20 + 15);
-
-        this.geometry = new Ammo.btBoxShape();
+// TODO: ここ ココ
+        const geometry = new Ammo.btBoxShape(
+            bt3(this.chassisWidth * 0.5, 
+                this.chassisHeight * 0.5,
+                this.chassisDepth * 0.5)
+        );
+        //this.geometry = geometry;
         const transform = new Ammo.btTransform();
         transform.setIdentity();
         transform.setOrigin(bt3(pos.x, pos.y, pos.z));
         transform.setRotation(btq(0, 0, 0, 1));
         const motionState = new Ammo.btDefaultMotionState(transform);
         const localInertia = bt3(0, 0, 0);
-        this.geometry.calculateLocalInertia(this.massVehicle, localInertia);
+        geometry.calculateLocalInertia(this.massVehicle, localInertia);
         const rbInfo = new Ammo.btRigidBodyConstructionInfo(
-            this.massVehicle, motionState, this.geometry, localInertia);
+            this.massVehicle, motionState, geometry, localInertia);
 /**
  * シャーシーのボディ
  */
@@ -328,8 +333,8 @@ function addWheel(isFront, pos, radius, width, index) {
             const n = vehicle.getNumWheels();
             window.idwheelnumview.textContent = `${n} ${tstr()}`;
 
-            let tm, p, q, i;
-            for (i = 0; i < n; ++i) {
+            let tm, p, q;
+            for (let i = 0; i < n; ++i) {
                 vehicle.updateWheelTransform(i, true);
                 tm = vehicle.getWheelTransformWS(i);
                 p = tm.getOrigin();
@@ -341,8 +346,8 @@ function addWheel(isFront, pos, radius, width, index) {
             tm = vehicle.getChassisWorldTransform();
             p = tm.getOrigin();
             q = tm.getRotation();
-            this.chassisMesh.position.copy(bt2p(p));
-            this.chassisMesh.quaternion.copy(bt2q(q));
+            chassisMesh.position.copy(bt2p(p));
+            chassisMesh.quaternion.copy(bt2q(q));
             window.idy1.textContent = `${p.y().toFixed(1)}`;
         }
 
