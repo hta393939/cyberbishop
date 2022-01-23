@@ -18,6 +18,10 @@ body {
     height: 100%;
 }
 
+.pt {
+    cursor: pointer;
+}
+
 .toright {
     display: flex;
     flex-direction: row;

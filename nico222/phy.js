@@ -65,19 +65,31 @@ const bt2p = (a) => {
  * @param {Ammo.btQuaternion} a 
  * @returns {THREE.Quaternion}
  */
-const bt2q = (a) => {
+const qbt2t = (a) => {
     return new THREE.Quaternion(a.x(), a.y(), a.z(), a.w());
 };
+
+/**
+ * quaternion three -> ammo
+ * @param {THREE.Quaternion} a 
+ * @returns {Ammo.btQuaternion}
+ */
+const qt2bt = (a) => {
+    return new Ammo.btQuaternion(a.x, a.y, a.z, a.w);
+};
+
 
 
 /**
  * 車一つ
  */
-class Car {
+class Car extends EventTarget {
 /**
  * コンストラクタ
  */
     constructor() {
+        super();
+
         this.name = this.constructor.name;
 
         this.syncList = [];
@@ -104,6 +116,8 @@ class Car {
  */
         this.chassisDepth = 4;
         this.massVehicle = 800;
+
+        this.EV_TRACE = 'trace';
 
 /**
  * 後輪軸Z
@@ -159,22 +173,20 @@ class Car {
 
 /**
  * Car インスタンスを初期化する
- * @param {Ammo.btDynamicPhysicsWorld}
+ * @param {Ammo.btDynamicPhysicsWorld} world
  */
-    init(inworld) {
+    init(world) {
         console.log(this.name, 'init called');
 
-        this.world = inworld;
+        this.world = world;
 
-// 
         const pos = new THREE.Vector3(0, 4, -20 + 15);
-// TODO: ここ ココ
+// TODO: ここ ココ だった;;
         const geometry = new Ammo.btBoxShape(
             bt3(this.chassisWidth * 0.5, 
                 this.chassisHeight * 0.5,
                 this.chassisDepth * 0.5)
         );
-        //this.geometry = geometry;
         const transform = new Ammo.btTransform();
         transform.setIdentity();
         transform.setOrigin(bt3(pos.x, pos.y, pos.z));
@@ -230,7 +242,7 @@ class Car {
  * @param {number} width 幅
  * @param {number} index 0からのインデックス
  */
-function addWheel(isFront, pos, radius, width, index) {
+const addWheel = (isFront, pos, radius, width, index) => {
     console.log('addWheel called', index);
 
     let directionCS0 = bt3(0, -1, 0);
@@ -259,8 +271,8 @@ function addWheel(isFront, pos, radius, width, index) {
     wheelInfo.set_m_frictionSlip(fric);
     wheelInfo.set_m_rollInfluence(roll);
 
-//    this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
-}
+    this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
+};
 
 
         addWheel(true,
@@ -293,24 +305,15 @@ function addWheel(isFront, pos, radius, width, index) {
             this.wheelWidthBack,
             this.BACK_RIGHT);
 
-        for (let i = 0; i < 4; ++i) {
-            let index = i;
-            this.wheelMeshes[index] = this.createWheelMesh(
-                this.wheelRadiusBack,
-                this.wheelWidthBack,
-                index);
-        }
-
-
 /**
  * 車の物理演算の結果をメッシュに反映する．対処済み．
  * @param {number} dt 
  */
-        function sync(dt) {
+        const sync = (dt) => {
             //const speed = vehicle.getCurrentSpeedKmHour();
 
             breakingForce = 0;
-            engineForce = 10;
+            engineForce = 500;
 
             if (false) {
 
@@ -333,28 +336,46 @@ function addWheel(isFront, pos, radius, width, index) {
             const n = vehicle.getNumWheels();
             window.idwheelnumview.textContent = `${n} ${tstr()}`;
 
-            let tm, p, q;
             for (let i = 0; i < n; ++i) {
                 vehicle.updateWheelTransform(i, true);
-                tm = vehicle.getWheelTransformWS(i);
-                p = tm.getOrigin();
-                q = tm.getRotation();
+                const tm = vehicle.getWheelTransformWS(i);
+                const p = tm.getOrigin();
+                const q = tm.getRotation();
                 this.wheelMeshes[i].position.copy(bt2p(p));
-                this.wheelMeshes[i].quaternion.copy(bt2q(q));
+                this.wheelMeshes[i].quaternion.copy(qbt2t(q));
             }
 
-            tm = vehicle.getChassisWorldTransform();
-            p = tm.getOrigin();
-            q = tm.getRotation();
-            chassisMesh.position.copy(bt2p(p));
-            chassisMesh.quaternion.copy(bt2q(q));
-            window.idy1.textContent = `${p.y().toFixed(1)}`;
-        }
+            const tm = vehicle.getChassisWorldTransform();
+            const p = tm.getOrigin();
+            const q = tm.getRotation();
+            const position = bt2p(p);
+            const quaternion = qbt2t(q);
+            chassisMesh.position.copy(position);
+            chassisMesh.quaternion.copy(quaternion);
+            window.idy1.textContent = `${p.y().toFixed(6)}`;
+
+            if (window.idtrace.checked) {
+                const cev = new CustomEvent(this.EV_TRACE, {
+                    detail: {
+                        position,
+                        quaternion,
+                    }
+                });
+                this.dispatchEvent(cev);
+            }
+        };
 
 
-        this.syncList.push(sync.bind(this));
+        this.syncList.push(sync);
     }
 
+/**
+ * 車体のメッシュを作る
+ * @param {number} w 
+ * @param {number} l 
+ * @param {number} h 
+ * @returns 
+ */
     createChassisMesh(w, l, h) {
         const geo = new THREE.BoxBufferGeometry(w, l, h, 1, 1, 1);
         const mtl = new THREE.MeshStandardMaterial({
@@ -362,6 +383,7 @@ function addWheel(isFront, pos, radius, width, index) {
             wireframe: true,
         });
         const m = new THREE.Mesh(geo, mtl);
+        m.castShadow = true;
         m.name = `c${pad(0, 5)}`;
         return m;
     }
@@ -452,14 +474,14 @@ function addWheel(isFront, pos, radius, width, index) {
             const p = tm.getOrigin();
             const q = tm.getRotation();
             this.wheelMeshes[i].position.copy(bt2p(p));
-            this.wheelMeshes[i].quaternion.copy(bt2q(q));
+            this.wheelMeshes[i].quaternion.copy(qbt2t(q));
         }
 
         const tm = vehicle.getChassisWorldTransform();
         const p = tm.getOrigin();
         const q = tm.getRotation();
         this.chassisMesh.position.copy(bt2p(p));
-        this.chassisMesh.quaternion.copy(bt2q(q));
+        this.chassisMesh.quaternion.copy(qbt2t(q));
     }
     */
 
@@ -1089,7 +1111,9 @@ class Phy extends EventTarget {
         const dt = this.clock.getDelta();
 
         if (this.control) {
-            this.control.update();
+            if (!window.idtrace.checked) {
+                this.control.update();
+            }
         }
 
         this.mainscene.traverse(obj => {
@@ -1924,6 +1948,10 @@ class Phy extends EventTarget {
         {
             const car = new Car();
             this.car = car;
+            car.addEventListener(car.EV_TRACE, ev => {
+                this.traceCamera(ev.detail.position,
+                    ev.detail.quaternion);
+            });
             car.init(this.world);
 
             this.mainscene.add(car.chassisMesh);
@@ -2608,13 +2636,36 @@ class Phy extends EventTarget {
  * 床を作る
  */
     makeGround() {
-        {
-            const m = this.makeBox([20, 1, 20],
-                [0, -2, 0], 0,
-                { color: 0x333333 },
-                { friction: 0.5 });
-            m.receiveShadow = true;
-            this.mainscene.add(m);
+        let oneside = 100;
+        let num = 20;
+        for (let i = 0; i < num; ++i) {
+            for (let j = 0; j < num; ++j) {
+                let isBorder = false;
+                if (i === 0 || i === num-1
+                    || j === 0 || j === num-1) {
+                    isBorder = true;
+                }
+                let r = j * 10;
+                let g = i * 10;
+                let b = 0xcc;
+                if (isBorder) {
+                    r = 0x33;
+                    g = 0x33;
+                    b = 0x33;
+                }
+
+                const quaternion = new THREE.Quaternion();
+                const axis = new THREE.Vector3(1, 0, 0);
+                const ang = Math.PI * 0.08 / 180;
+                quaternion.setFromAxisAngle(axis, ang);
+                const m = this.makeBox([oneside, 1, oneside],
+                    [(j * 2 - (num-1)) * oneside / 2, -2, (i * 2 - (num-1)) * oneside / 2], 0,
+                    { color: (r << 16) | (g << 8) | b,
+                        friction: 0.5,
+                        quaternion });
+                m.receiveShadow = true;
+                this.mainscene.add(m);
+            }
         }
     }
 
@@ -2623,7 +2674,7 @@ class Phy extends EventTarget {
  * @param {number[]} sides 3要素で辺の長さ
  * @param {number[]} pos 3要素
  * @param {number} mass 質量
- * @param {{ friction: number }} inopt 
+ * @param {{ friction: number, quaternion?: Object }} inopt 
  */
     makeBox(sides, pos, mass, inopt = {}) {
         {
@@ -2634,6 +2685,9 @@ class Phy extends EventTarget {
             });
             const m = new THREE.Mesh(geo, mtl);
             m.position.set(...pos);
+            if (inopt.quaternion) {
+                m.quaternion.copy(inopt.quaternion);
+            }
 
             const box = new Ammo.btBoxShape(bt3(
                 sides[0] * 0.5,
@@ -2642,7 +2696,9 @@ class Phy extends EventTarget {
             const transform = new Ammo.btTransform();
             transform.setIdentity();
             transform.setOrigin(bt3(...pos));
-            transform.setRotation(btq(0, 0, 0, 1));
+            if (inopt.quaternion) {
+                transform.setRotation(qt2bt(inopt.quaternion));
+            }
             const motionState = new Ammo.btDefaultMotionState(transform);
             const localInertia = bt3(0, 0, 0);
             box.calculateLocalInertia(mass, localInertia);
@@ -2657,7 +2713,6 @@ class Phy extends EventTarget {
             m.userData.rigidbody = body;
 
             if (mass > 0) {
-            //{
                 body.setActivationState(DISABLE_DEACTIVATION);
 
                 let TRANSFORM_AUX = new Ammo.btTransform();
@@ -2678,7 +2733,50 @@ class Phy extends EventTarget {
         }
     }
 
+/**
+ * 車をカメラでトレースしたい
+ * @param {THREE.Vector3} pos 
+ * @param {THREE.Quaternion} quat 
+ */
+    traceCamera(pos, quat) {
+        // 
+        // 
+        if (this.control) {
+            // TrackballControls
+            // reset()
+            //   target target0 からコピー
+            //   target0, position0, up0, zoom0
+            // object
+            // PerspectiveCamera には zoom があってデフォルトは 1.0
+//            this.control.target0.copy(pos);
+//            this.control.reset();
 
+            {
+                let toUp = 1.5;
+
+                const front = new THREE.Vector3(0, 0, 1);
+                front.applyQuaternion(quat);
+                front.y = 0;
+                front.normalize();
+                if (front.length() > 0) {
+                    // Do nothing.
+                } else {
+                    front.set(0, 0, 15);
+                }
+
+                //camera.quaternion.set(0, 0, 0);
+
+                const target = pos.clone();
+                target.add(new THREE.Vector3(0, toUp, 0));
+
+                const campos = target.clone();
+                campos.add(front.multiplyScalar(-8));
+           
+                this.maincamera.position.copy(campos);
+                this.maincamera.lookAt(target);
+            }
+        }
+    }
 
 }
 
