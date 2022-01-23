@@ -403,9 +403,9 @@ class Phy {
  * @param {number} friction 
  */
 function createBox(pos, quat, w, l, h, mass, friction) {
-    var shape = new THREE.BoxBufferGeometry(
+    const shape = new THREE.BoxBufferGeometry(
         w, l, h, 1, 1, 1);
-    var mtl = mass > 0 ? materialDynamic : materialStatic;
+    const mtl = mass > 0 ? materialDynamic : materialStatic;
 
     if (!mass) {
         mass = 0;
@@ -414,27 +414,27 @@ function createBox(pos, quat, w, l, h, mass, friction) {
         friction = 1;
     }
 
-    var mesh = new THREE.Mesh(shape, mtl);
+    const mesh = new THREE.Mesh(shape, mtl);
     mesh.position.copy(pos);
     mesh.quaternion.copy(quat);
     scene.add(mesh);
 
 // TODO: ▽
-    var geometry = new Ammo.btBoxShape(bt3(
+    const geometry = new Ammo.btBoxShape(bt3(
         w * 0.5,
         l * 0.5,
         h * 0.5));
-    var transform = new Ammo.btTransform();
+    const transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+    transform.setOrigin(bt3(pos.x, pos.y, pos.z));
     transform.setRotation(btq(quat.x, quat.y, quat.z, quat.w));
-    var motionState = new Ammo.btDefaultMotionState(transform);
-    var localInertia = bt3(0, 0, 0);
+    const motionState = new Ammo.btDefaultMotionState(transform);
+    const localInertia = bt3(0, 0, 0);
 // TODO: ここ ココ ☆
     geometry.calculateLocalInertia(mass, localInertia);
-    var rbInfo = new Ammo.btRigidBodyConstructionInfo(
+    const rbInfo = new Ammo.btRigidBodyConstructionInfo(
             mass, motionState, geometry, localInertia);
-    var body = new Ammo.btRigidBody(rbInfo);
+    const body = new Ammo.btRigidBody(rbInfo);
     body.setFriction(friction);
     //body.setDamping(0, 0);
     physicsWorld.addRigidBody(body);
@@ -442,11 +442,11 @@ function createBox(pos, quat, w, l, h, mass, friction) {
     if (mass > 0) {
         body.setActivationState(DISABLE_DEACTIVATION);
         function sync(dt) {
-            var ms = body.getMotionState();
+            const ms = body.getMotionState();
             if (ms) {
                 ms.getWorldTransform(TRANSFORM_AUX);
-                var p = TRANSFORM_AUX.getOrigin();
-                var q = TRANSFORM_AUX.getRotation();
+                const p = TRANSFORM_AUX.getOrigin();
+                const q = TRANSFORM_AUX.getRotation();
                 mesh.position.set(p.x(), p.y(), p.z());
                 mesh.quaternion.set(q.x(), q.y(), q.z(), q.w());
             }
@@ -645,12 +645,12 @@ function createVehicle(pos, quat) {
  * シャーシの幅
  * @default 1.8
  */
-    var chassisWidth = 1.8;
+    const chassisWidth = 1.8;
  /**
   * Y
   * @default 0.6
   */
-        var chassisHeight = 0.6;
+        const chassisHeight = 0.6;
  /**
   * 後輪軸Z
   * @default -1
@@ -691,12 +691,12 @@ function createVehicle(pos, quat) {
          this.wheelWidthFront = 0.2;
 
 // TODO: ▽
-        var friction = 1000;
-        var suspensionStiffness = 20.0;
-        var suspensionDamping = 2.3;
-        var suspensionCompression = 4.4;
-    var suspensionRestLength = 0.6;
-        var rollInfluence = 0.2;
+        const friction = 1000;
+        const suspensionStiffness = 20.0;
+        const suspensionDamping = 2.3;
+        const suspensionCompression = 4.4;
+    const suspensionRestLength = 0.6;
+        const rollInfluence = 0.2;
  
          this.steeringIncrement = 0.04;
          this.steeringClamp = 0.5;
@@ -704,41 +704,41 @@ function createVehicle(pos, quat) {
          this.maxBreakingForce = 100;
 
 // TODO: ◇
-    var chassisLength = 4;
-    var massVehicle = 800;
+    const chassisLength = 4;
+    const massVehicle = 800;
 
     // Chassis
-    var geometry = new Ammo.btBoxShape(
-        new Ammo.btVector3(chassisWidth * 0.5,
+    const geometry = new Ammo.btBoxShape(
+        bt3(chassisWidth * 0.5,
             chassisHeight * 0.5,
             chassisLength * 0.5));
-    var transform = new Ammo.btTransform();
+    const transform = new Ammo.btTransform();
     transform.setIdentity();
-    transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+    transform.setOrigin(bt3(pos.x, pos.y, pos.z));
     transform.setRotation(
         new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
-    var motionState = new Ammo.btDefaultMotionState(transform);
-    var localInertia = new Ammo.btVector3(0, 0, 0);
+    const motionState = new Ammo.btDefaultMotionState(transform);
+    const localInertia = bt3(0, 0, 0);
     geometry.calculateLocalInertia(massVehicle, localInertia);
-    var rbInfo = new Ammo.btRigidBodyConstructionInfo(
+    const rbInfo = new Ammo.btRigidBodyConstructionInfo(
         massVehicle, motionState, geometry, localInertia);
-    var body = new Ammo.btRigidBody(rbInfo);
+    const body = new Ammo.btRigidBody(rbInfo);
     body.setActivationState(DISABLE_DEACTIVATION);
     physicsWorld.addRigidBody(body);
-    var chassisMesh = createChassisMesh(
+    const chassisMesh = createChassisMesh(
         chassisWidth,
         chassisHeight,
         chassisLength,
     );
 
 // レイキャストビークル
-    var engineForce = 0;
-    var vehicleSteering = 0;
-    var breakingForce = 0;
-    var tuning = new Ammo.btVehicleTuning();
-    var rayCaster = new Ammo.btDefaultVehicleRaycaster(physicsWorld);
+    let engineForce = 0;
+    let vehicleSteering = 0;
+    let breakingForce = 0;
+    const tuning = new Ammo.btVehicleTuning();
+    const rayCaster = new Ammo.btDefaultVehicleRaycaster(physicsWorld);
 // TODO: ☆ ここ ココ
-    var vehicle = new Ammo.btRaycastVehicle(
+    const vehicle = new Ammo.btRaycastVehicle(
         tuning, body, rayCaster);
 
     vehicle.setCoordinateSystem(0, 1, 2);
@@ -754,9 +754,9 @@ function createVehicle(pos, quat) {
     var wheelMeshes = [];
 
 // ▽ この辺;;
-    var wheelDirectionCS0 = bt3(0, -1, 0);
+    const wheelDirectionCS0 = bt3(0, -1, 0);
 // ▽ この辺;;
-    var wheelAxleCS = bt3(-1, 0, 0);
+    const wheelAxleCS = bt3(-1, 0, 0);
 
 /**
 * 物理とメッシュでホイールを追加する
@@ -770,7 +770,7 @@ function createVehicle(pos, quat) {
 //    const addWheel = (isFront, pos, radius, width, index) => {
         console.log('addWheel called', index);
 
-        var wheelInfo = vehicle.addWheel(
+        const wheelInfo = vehicle.addWheel(
             pos,
             wheelDirectionCS0,
             wheelAxleCS,
@@ -792,14 +792,14 @@ function createVehicle(pos, quat) {
     }
 
     addWheel(true,
-        new Ammo.btVector3(this.wheelHalfTrackFront,
+        bt3(this.wheelHalfTrackFront,
             this.wheelAxisHeightFront,
             this.wheelAxisFrontPosition),
         this.wheelRadiusFront,
         this.wheelWidthFront,
         FRONT_LEFT);
     addWheel(true,
-        new Ammo.btVector3(-this.wheelHalfTrackFront,
+        bt3(-this.wheelHalfTrackFront,
             this.wheelAxisHeightFront,
             this.wheelAxisFrontPosition),
         this.wheelRadiusFront,
@@ -807,14 +807,14 @@ function createVehicle(pos, quat) {
         FRONT_RIGHT);
 
     addWheel(false,
-        new Ammo.btVector3(this.wheelHalfTrackBack,
+        bt3(this.wheelHalfTrackBack,
             this.wheelAxisHeightBack,
             this.wheelAxisPositionBack),
         this.wheelRadiusBack,
         this.wheelWidthBack,
         BACK_LEFT);
     addWheel(false,
-        new Ammo.btVector3(-this.wheelHalfTrackBack,
+        bt3(-this.wheelHalfTrackBack,
             this.wheelAxisHeightBack,
             this.wheelAxisPositionBack),
         this.wheelRadiusBack,
@@ -846,8 +846,8 @@ function createVehicle(pos, quat) {
         vehicle.setSteeringValue(vehicleSteering, FRONT_LEFT);
         vehicle.setSteeringValue(vehicleSteering, FRONT_RIGHT);
 
-        var tm, p, q, i;
-        var n = vehicle.getNumWheels();
+        let tm, p, q, i;
+        let n = vehicle.getNumWheels();
 
         for (i = 0; i < n; ++i) {
             vehicle.updateWheelTransform(i, true);
@@ -896,7 +896,7 @@ function createObjects() {
     }
 
     createVehicle.call({},
-        new THREE.Vector3(0, 4 + 10, -20),
+        new THREE.Vector3(0, 4 + 3, -20),
         new THREE.Quaternion(0, 0, 0, 1));
     console.log('createObjects leaves');
 }
