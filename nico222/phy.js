@@ -691,11 +691,11 @@ class Phy extends EventTarget {
         this.terrainHalfWidth = this.terrainWidth / 2;
         this.terrainHalfDepth = this.terrainDepth / 2;
 /**
- * 高さの最大
+ * 領域の高さの最大
  */
         this.terrainMaxHeight = 8 * 0 + 1;
 /**
- * 高さの最小
+ * 領域の高さの最小
  */
         this.terrainMinHeight = -2;
 
@@ -941,11 +941,11 @@ class Phy extends EventTarget {
     }
 
 /**
- * 
+ * 領域による地面生成
  * @returns {THREE.Mesh}
  */
     makeHeightGround() {
-        console.log(this.name, 'makeHeightGround called');
+        console.log(this.name, 'makeHeightGround terrain called');
 
         // 高さ配列を作る
         const geo = new THREE.PlaneBufferGeometry(
@@ -995,13 +995,16 @@ class Phy extends EventTarget {
         const upAxis = 1; // Y
         const hdt = 'PHY_FLOAT';
         const flipQuadEdges = false;
-        this.ammoHeightData = Ammo._malloc(4 * this.terrainWidth * this.terrainDepth);
+/**
+ * ammo で使える float メモリ空間
+ */
+        const ammoHeightData = Ammo._malloc(4 * this.terrainWidth * this.terrainDepth);
 
         let p = 0;
         let p2 = 0;
         for (let j = 0; j < this.terrainDepth; ++j) {
             for (let i = 0; i < this.terrainWidth; ++i) {
-                Ammo.HEAP32[this.ammoHeightData + p2 >> 2] = heightdata[p];
+                Ammo.HEAP32[ammoHeightData + p2 >> 2] = heightdata[p];
 
                 p ++;
                 p2 += 4;
@@ -1024,7 +1027,7 @@ class Phy extends EventTarget {
         heightShape.setLocalScaling(bt3(scaleX, 1, scaleZ));
         heightShape.setMargin(0.05);
 
-        console.log(this.name, 'createTerrainShape leaves');
+        console.log(this.name, 'createTerrainShape leaves', heightShape);
         return heightShape;
     }
 
@@ -1049,7 +1052,7 @@ class Phy extends EventTarget {
             this.mainscene.add(m);
         }
 
-        return;
+        //return;
         {
             const m = this.makeHeightGround();
             this.mainscene.add(m);
