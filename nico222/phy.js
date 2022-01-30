@@ -265,11 +265,21 @@ const addWheel = (isFront, pos, radius, width, index) => {
         tuning,
         isFront,
     );
+    /*
     wheelInfo.set_m_suspensionStiffness(susstill);
     wheelInfo.set_m_wheelsDampingRelaxation(susdamp);
     wheelInfo.set_m_wheelsDampingCompression(suscomp);
     wheelInfo.set_m_frictionSlip(fric);
     wheelInfo.set_m_rollInfluence(roll);
+    */
+
+    
+    wheelInfo.set_m_suspensionStiffness(susstill);
+    wheelInfo.set_m_wheelsDampingRelaxation(susdamp);
+    wheelInfo.set_m_wheelsDampingCompression(suscomp);
+    wheelInfo.set_m_frictionSlip(1000);
+    wheelInfo.set_m_rollInfluence(0.2);
+    
 
     this.wheelMeshes[index] = this.createWheelMesh(radius, width, index);
 };
@@ -310,10 +320,12 @@ const addWheel = (isFront, pos, radius, width, index) => {
  * @param {number} dt 
  */
         const sync = (dt) => {
-            //const speed = vehicle.getCurrentSpeedKmHour();
+            const speed = vehicle.getCurrentSpeedKmHour();
+            window.idspeedview.textContent = `${speed.toFixed(1)}`;
 
             breakingForce = 0;
             engineForce = 500;
+            engineForce = 1000;
 
             if (false) {
 
@@ -321,6 +333,10 @@ const addWheel = (isFront, pos, radius, width, index) => {
             if (true) {
                 // + で左?
                 //this.vehicleSteering = 10;
+            }
+
+            if (speed > 120) {
+                breakingForce = this.maxBreakingForce;
             }
 
             vehicle.applyEngineForce(engineForce, this.BACK_LEFT);
@@ -1960,7 +1976,6 @@ class Phy extends EventTarget {
                 this.mainscene.add(v);
             }
         }
-
         {
             window.addEventListener('mousedown', ev => {
                 this.car.vehicleSteering = - (ev.clientX / 768 - 0.5) * 2 * 45 * Math.PI / 180;
