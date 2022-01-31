@@ -674,6 +674,10 @@ class Phy extends EventTarget {
         this.windowmsec = 3000;
         this.targetfps = 60;
 
+/**
+ * 幅
+ * @default 128
+ */
         this.terrainWidth = 128;
 /**
  * 奥行方向の数
@@ -692,10 +696,12 @@ class Phy extends EventTarget {
         this.terrainHalfDepth = this.terrainDepth / 2;
 /**
  * 領域の高さの最大
+ * @default 8
  */
-        this.terrainMaxHeight = 8 * 0 + 1;
+        this.terrainMaxHeight = 8;
 /**
  * 領域の高さの最小
+ * @default -2
  */
         this.terrainMinHeight = -2;
 
@@ -760,9 +766,9 @@ class Phy extends EventTarget {
 
 /**
  * directional light 0.0-1.0
- * @default 1.0
+ * @default 0.4
  */
-        this.difflevel = 1.0;
+        this.difflevel = 0.4;
 /**
  * ambient light 0.0-1.0
  */
@@ -942,43 +948,37 @@ class Phy extends EventTarget {
 
 /**
  * 領域による地面生成
+ * @param {Float32Array} heightData 
+ * @param {number} width 幅数．整数
+ * @param {number} depth 高さ数．整数
  * @returns {THREE.Mesh}
  */
-    makeHeightGround() {
+    makeHeightGround(heightData, width, depth) {
         console.log(this.name, 'makeHeightGround terrain called');
 
         // 高さ配列を作る
         const geo = new THREE.PlaneBufferGeometry(
             100, 100,
-            this.terrainWidth - 1, this.terrainDepth - 1
+            width - 1, depth - 1
         );
         geo.rotateX(-Math.PI * 0.5);
         const vertices = geo.attributes.position.array;
 
-        const heightData = this.generateHeight(
-            this.terrainWidth, this.terrainDepth,
-            this.terrainMinHeight, this.terrainMaxHeight);
-        let i = 0;
-        let j = 0;
+// 元コードは個数間違ってるよね → なんか違うんだけど;;
+        const l = vertices.length;
+//        const l = heightData.length;
 
-// 元コードは個数間違ってるよね
-//        const l = vertices.length;
-        const l = heightData.length;
-
-        for (let i = 0; i < l; ++i) {
+        for (let i = 0, j = 0; i < l; ++i, j += 3) {
             vertices[j + 1] = heightData[i]; // Y
-//            i ++;
-            j += 3;
         }
         geo.computeVertexNormals();
 
         const mtl = new THREE.MeshStandardMaterial({
-            color: 0x666600
+            color: 0xc7c7c7
         });
 
         const m = new THREE.Mesh(geo, mtl);
         m.name = 't';
-        m.userData.heightdata = heightData;
 
         console.log(this.name, 'makeHeightGround leaves');
         return m;
@@ -1004,7 +1004,7 @@ class Phy extends EventTarget {
         let p2 = 0;
         for (let j = 0; j < this.terrainDepth; ++j) {
             for (let i = 0; i < this.terrainWidth; ++i) {
-                Ammo.HEAP32[ammoHeightData + p2 >> 2] = heightdata[p];
+                Ammo.HEAPF32[ammoHeightData + p2 >> 2] = heightdata[p];
 
                 p ++;
                 p2 += 4;
@@ -1014,7 +1014,7 @@ class Phy extends EventTarget {
         const heightShape = new Ammo.btHeightfieldTerrainShape(
             this.terrainWidth,
             this.terrainDepth,
-            this.ammoHeightData,
+            ammoHeightData,
             scale,
             this.terrainMinHeight,
             this.terrainMaxHeight,
@@ -1054,10 +1054,16 @@ class Phy extends EventTarget {
 
         //return;
         {
-            const m = this.makeHeightGround();
+            const heightData = this.generateHeight(
+                this.terrainWidth, this.terrainDepth,
+                this.terrainMinHeight, this.terrainMaxHeight,
+            );
+
+            const m = this.makeHeightGround(heightData,
+                this.terrainWidth, this.terrainDepth);
             this.mainscene.add(m);
 
-            const groundShape = this.createTerrainShape(m.userData.heightdata);
+            const groundShape = this.createTerrainShape(heightData);
             const transform = new Ammo.btTransform();
             transform.setIdentity();
             transform.setOrigin(
