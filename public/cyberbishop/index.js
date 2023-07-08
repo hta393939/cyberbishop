@@ -36,10 +36,13 @@ class Misc {
         };
 
         {
-            window.addEventListener('resize', (ev) => {
-                _onResize(ev);
+            window.addEventListener('resize', () => {
+                _onResize();
             });
+            _onResize();
         }
+
+        await baby.secondInit();
     }
 }
 
