@@ -1,12 +1,43 @@
 @charset "UTF-8";
 
 :root {
-/* 未実装 */
-    --sumi-900: #000000;
-    --sumi-800: #000000;
-    --sumi-600: #000000;
+    --width: 960px;
+    --height: 540px;
 }
 
+body {
+    position: relative;
+    margin: 0;
+    border: none;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #1c1c1a;
+}
+
+.toright {
+    display: flex;
+    flex-direction: row;
+}
+
+#loading {
+    color: white;
+    font-weight: bold;
+    background-color: #1c1c1a;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    padding: 2em;
+}
+
+#maincanvas {
+    border: none;
+    width: var(--width);
+    height: var(--height);
+}
 
 
 
