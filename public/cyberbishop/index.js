@@ -17,6 +17,16 @@ class Misc {
         param.canvas = document.getElementById('maincanvas');
         await baby.init(param);
 
+        await new Promise((resolve, reject) => {
+            effekseer.initRuntime(`../third_party/effekseer/effekseer.wasm`, () => {
+                resolve();
+            });
+        });
+        {
+            const context = effekseer.createContext();
+            baby.initEffek(context);
+        }
+
         {
             const el = document.getElementById('loading');
             el.remove();
