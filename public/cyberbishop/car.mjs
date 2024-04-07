@@ -5,6 +5,9 @@
 class Misc {
     constructor() {
         this.baby = null;
+
+        this.joys = [null, null];
+        this.isTop = true;
     }
 
     async init() {
@@ -16,7 +19,7 @@ class Misc {
         await this.firstInit(param);
 
         await new Promise((resolve, reject) => {
-            effekseer.initRuntime(`../third_party/effekseer/effekseer.wasm`, () => {
+            effekseer.initRuntime(`${this.isTop ? '' : '.'}./third_party/effekseer/effekseer.wasm`, () => {
                 resolve();
             });
         });
@@ -64,7 +67,9 @@ class Misc {
             0, 0, 2,
             new BABYLON.Vector3(0, 0, 0),
             scene);
+        this.camera = camera;
         camera.setPosition(new BABYLON.Vector3(2, 5, 20));
+        camera.wheelDeltaPrecentage = 0.01;
         camera.attachControl();
 
         {
@@ -74,17 +79,44 @@ class Misc {
         }
 
         engine.runRenderLoop(() => {
+            this.update();
             scene.render();
         });
+    }
+
+    update() {
+        if (!this.joys[1]) {
+            return;
+        }
+
+        {
+            const ljx = this.joys[0].deltaPosition.x;
+            const rjx = this.joys[1].deltaPosition.y;
+            let x = ljx * 10;
+            let y = rjx * 10;
+            let z = 20;
+            this.camera.setPosition(new BABYLON.Vector3(x, y, z));
+        }
     }
 
     async secondInit(scene) {
         console.log('secondInit');
         const havokInstance = await HavokPhysics();
         const havokPlugin = new BABYLON.HavokPlugin(true, havokInstance);
+        scene.enablePhysics(new BABYLON.Vector3(0, -9.8, 0),
+            havokPlugin);
 
         this.makeCar(scene);
         this.makeMap(scene);
+
+        {
+            const lj = new BABYLON.VirtualJoystick(true,
+                { color: 'white' });
+            const rj = new BABYLON.VirtualJoystick(false,
+                { color: 'red' });
+
+            this.joys = [lj, rj];
+        }
     }
 
     makeCar(scene) {
@@ -97,7 +129,7 @@ class Misc {
                 mass: 10,
                 friction: 1,
             };
-            const pa = new BABYLON.PhysicsAggregate('pabody',
+            const pa = new BABYLON.PhysicsAggregate(bodyMesh,
                 BABYLON.PhysicsShapeType.CONVEX_HULL,
                 param);
             this.pa = pa;
@@ -127,7 +159,9 @@ class Misc {
                 },
                 scene);
             m.position = new BABYLON.Vector3(param.x, param.y, param.z);
-            const pa = new BABYLON.PhysicsAggregate(`tire${i}`,
+            const pa = new BABYLON.PhysicsAggregate(
+                m,
+                BABYLON.PhysicsShapeType.CONVEX_HULL,
                 {
                     mass: 2,
                     friction: 1,
@@ -140,7 +174,8 @@ class Misc {
                 xAxis, xAxis,
                 scene,
             );
-            pa.body.addConstraints(this.pa.body, hinge);
+            console.log('m', m, 'pa', pa, 'hinge', hinge);
+            pa.body.addConstraint(this.pa.body, hinge);
         }
 
     }
@@ -151,7 +186,8 @@ class Misc {
             const ground = BABYLON.MeshBuilder.CreateGround('ground1',
                 { width: 100, height: 100 },
                 scene);
-            const pa = new BABYLON.PhysicsAggregate('paground1',
+            ground.setAbsolutePosition(new BABYLON.Vector3(0, -5, 0));
+            const pa = new BABYLON.PhysicsAggregate(ground,
                 BABYLON.PhysicsShapeType.BOX,
                 { mass: 0, friction: 1, restitution: 0 },
                 scene);
