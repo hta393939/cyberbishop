@@ -1,0 +1,7 @@
+{
+    "name": "cyberbishop",
+    "scripts": {
+        "carcomp": "powershell compress-archive -Force public/car/* car.zip",
+        "comp": "powershell compress-archive -Force public/cyberbishop/* cyberbishop.zip"
+    }
+}
