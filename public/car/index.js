@@ -110,8 +110,8 @@ class Misc {
 
         this.makeCar(scene);
         this.makeMap(scene);
-
-        {
+        this.makeAreas(scene);
+        if (false) {
             const lj = new BABYLON.VirtualJoystick(true,
                 { color: 'white' });
             const rj = new BABYLON.VirtualJoystick(false,
@@ -193,6 +193,91 @@ class Misc {
                 BABYLON.PhysicsShapeType.BOX,
                 { mass: 0, friction: 1, restitution: 0 },
                 scene);
+        }
+    }
+
+/**
+ * 
+ * @param {BABYLON.Scene} scene 
+ * @param {bolean} cross 
+ */
+    makeOneArea(param, scene, cross) {
+        const vd = BABYLON.CreateBoxVertexData({
+            width: 2, height: 2, depth: 2,
+        });
+
+        const dirs = [
+            [-1, 1, 1], [-1, 1, -1], [1, 1, -1], [1, 1, 1]
+        ];
+        const numVertex = vd.positions.length / 3;
+        for (let i = 0; i < numVertex; ++i) {
+            const ft3 = i * 3;
+            const p = vd.positions.slice(ft3, ft3 + 3);
+            const index = dirs.findIndex(v => {
+                return (v[0] === p[0] && v[1] === p[1] && v[2] === p[2]);
+            });
+            for (let j = 0; j < 3; ++j) {
+                p[j] = p[j] * param.scale[j] + param.center[j];
+            }
+            if (index >= 0) {
+                p[1] += param.adds[index];
+            }
+
+            vd.positions.splice(ft3, 3, ...p);
+        }
+
+        { // 上面 ＼
+            const index = 4;
+            if (cross && false || true) {
+                const ft6 = index * 6;
+                const ft4 = index * 4;
+                const indices = [
+                    ft4, ft4 + 1, ft4 + 3,
+                    ft4 + 1, ft4 + 2, ft4 + 3,
+                ];
+                vd.indices.splice(ft6, 6, ...indices);
+            }
+        }
+
+        console.log('numVertex', numVertex, vd.positions.length, vd.positions);
+
+        const m = new BABYLON.Mesh(`a${Math.random()}`,
+            scene);
+        vd.applyToMesh(m, false);
+
+        const pa = new BABYLON.PhysicsAggregate(
+            m,
+            BABYLON.PhysicsShapeType.CONVEX_HULL,
+            { mass: 0, restitution: 0 }
+        );
+    }
+
+    makeAreas(scene) {
+        const cross = [
+            true, true, true, true,
+            true, true, true, true,
+            true, true, true, true,
+            true, true, true, true,
+        ];
+        const half = 10;
+        const wnum = 4;
+        const hnum = 4;
+        for (let i = 0; i < wnum * hnum; ++i) {
+            const param = {
+                adds: [4, 1, 2, 3],
+                center: [
+                    ((i & 3) * 2 - wnum + 1) * half,
+                    -5,
+                    (Math.floor(i / 4) * 2 - hnum + 1) * half,
+                ],
+                scale: [
+                    half,
+                    1,
+                    half,
+                ],
+            };
+            this.makeOneArea(param,
+                scene, cross[i]);
         }
     }
 
