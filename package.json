@@ -1,5 +1,7 @@
 {
     "name": "cyberbishop",
+    "version": "0.1.0",
+    "description": "ブランチが変なことに;;",
     "scripts": {
         "carcomp": "powershell compress-archive -Force public/car/* car.zip",
         "comp": "powershell compress-archive -Force public/cyberbishop/* cyberbishop.zip"
