@@ -72,9 +72,20 @@ class Misc {
         camera.wheelDeltaPrecentage = 0.01;
         camera.attachControl();
 
-        {
+        if (false) {
             const light = new BABYLON.PointLight('light1',
                 new BABYLON.Vector3(1, 5, 4),
+                scene);
+        }
+        if (false) {
+            const light = new BABYLON.DirectionalLight('light2',
+                new BABYLON.Vector3(-1, -1, -1),
+                scene);
+        }
+        {
+            const light = new BABYLON.HemisphericLight('light3',
+                new BABYLON.Vector3(1, 5, 4),
+                //new BABYLON.Vector3(1, 1, 1),
                 scene);
         }
 
@@ -127,15 +138,18 @@ class Misc {
             const bodyMesh = BABYLON.MeshBuilder.CreateBox('body',
                 {},
                 scene);
+            bodyMesh.position.y = 3;
             const param = {
-                mass: 10,
+                mass: 1,
                 friction: 1,
+                restitution: 0,
             };
             const pa = new BABYLON.PhysicsAggregate(bodyMesh,
                 BABYLON.PhysicsShapeType.CONVEX_HULL,
                 param);
             this.pa = pa;
         }
+        /*
         for (let i = 0; i < 4; ++i) { // tire
             const param = {
                 x: (i & 1) * 2 - 1,
@@ -179,6 +193,7 @@ class Misc {
             console.log('m', m, 'pa', pa, 'hinge', hinge);
             pa.body.addConstraint(this.pa.body, hinge);
         }
+        */
 
     }
 

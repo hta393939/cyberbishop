@@ -1,0 +1,9 @@
+@charset "UTF-8";
+
+.mini {
+    max-width: 20vw;
+}
+
+.border {
+    border: solid 1px red;
+}
