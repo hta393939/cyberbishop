@@ -3,11 +3,17 @@
  */
 
 class Misc {
+	static STORAGE_SLOW = 'slow';
+	static STORAGE_FAST = 'fast';
+
 	constructor() {
 		this.baby = null;
 
 		this.joys = [null, null];
 		this.isTop = true;
+
+		this.isThirdCamera = false;
+    this.isThirdCamera = true;
 
 		this.my = {
 			mesh: null,
@@ -16,6 +22,9 @@ class Misc {
 	}
 
 	async init() {
+		this.loadSetting();
+		this.saveSetting();
+
 		const param = {
 			width: 960, // 論理ピクセル幅
 			height: 540,
@@ -56,6 +65,24 @@ class Misc {
 		await this.secondInit(this.scene);
 	}
 
+	saveSetting() {
+		try {
+			const obj = {};
+			localStorage.setItem(Misc.STORAGE_SLOW, JSON.stringify(obj));
+		} catch(e) {
+
+		}
+	}
+
+	loadSetting() {
+		try {
+			const text = localStorage.getItem(Misc.STORAGE_SLOW);
+			const obj = JSON.parse(text);
+		} catch(e) {
+
+		}
+	}
+
 	initEffek(context) {
 		console.log('initEffek', context);
 	}
@@ -75,7 +102,7 @@ class Misc {
 		this.camera = camera;
 		camera.setPosition(new BABYLON.Vector3(2, 5, 20));
 		camera.wheelDeltaPrecentage = 0.01;
-		camera.attachControl();
+		//camera.attachControl();
 
 		if (false) {
 			const light = new BABYLON.PointLight('light1',
@@ -96,6 +123,11 @@ class Misc {
 
 		engine.runRenderLoop(() => {
 			this.update();
+
+      if (this.isThirdCamera) {
+        this.updateThirdCamera();
+      }
+
 			scene.render();
 		});
 	}
@@ -145,7 +177,9 @@ class Misc {
 		console.log('makeCar');
 		{ // body
 			const bodyMesh = BABYLON.MeshBuilder.CreateBox('my',
-				{},
+				{
+					width: 6, height: 6, depth: 6,
+				},
 				scene);
 			console.log('bodyMesh', bodyMesh.name, bodyMesh);
 			bodyMesh.position.y = 3;
@@ -275,7 +309,7 @@ class Misc {
 			}
 		}
 
-		console.log('numVertex', numVertex, vd.positions.length, vd.positions);
+		//console.log('numVertex', numVertex, vd.positions.length, vd.positions);
 
 		const m = new BABYLON.Mesh(`a${Math.random()}`,
 			scene);
@@ -301,7 +335,7 @@ class Misc {
 			true, true, true, true,
 			true, true, true, true,
 		];
-		const half = 10;
+		const half = 20;
 		const wnum = 4;
 		const hnum = 4;
 		for (let i = 0; i < wnum * hnum; ++i) {
@@ -355,6 +389,10 @@ class Misc {
 		}
 	}
 
+/**
+ * スピード制限する
+ * @param {*} body 
+ */
 	limitSpeed(body) {
 		// velo を得る
 		const linear = body.getLinearVelocity();
@@ -365,28 +403,35 @@ class Misc {
 
 		// 回転の制限はどうしよう
 		// クォータニオンに変換してから制限か??
+		let angLimit = Math.PI * 2;
+		ang.x = Misc.limitAbs(ang.x, angLimit);
+		ang.y = Misc.limitAbs(ang.y, angLimit);
+		ang.z = Misc.limitAbs(ang.z, angLimit);
 
 		// 制限する
 		body.setLinearVelocity(linear);
 		body.setAngularVelocity(ang);
 	}
 
-	thirdCamera() {
+	updateThirdCamera() {
 		const camera = this.camera;
-		const q = this.my.absoluteRotationQuaternion.clone();
-		const center = this.my.absolutePosition.clone();
+    const m = this.my.mesh;
+		const q = m?.absoluteRotationQuaternion?.clone();
+		const center = m?.absolutePosition?.clone();
+    if (!q) {
+      return;
+    }
 
 		const up = new BABYLON.Vector3(0, 1, 0).applyRotationQuaternion(q);
 		const fw = new BABYLON.Vector3(0, 0, 1).applyRotationQuaternion(q);
 
-		const height = 2;
-		const back = 2;
+		const height = 10;
+		const back = 40;
 
 		const target = center.add(up.scale(height));
 		const pos = target.add(fw.scale(-back));
 
-		//camera.target
-		// camera.up
+    camera.target = target;
 		camera.setPosition(pos);
 	}
 
@@ -408,8 +453,8 @@ class Misc {
 					//console.log(m.name, m);
 				//}
 				if (m.name === 'my') {
-					this.applyForce();
 					console.log('my');
+					this.applyForce();
 				}
 			}
 
@@ -424,13 +469,48 @@ class Misc {
 
 		const am = new BABYLON.ActionManager(scene);
 		this.actionManager = am;
-		am.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, (evt) => {
-			map[evt.sourceEvent.key] = (evt.sourceEvent.type == "keydown"); 
-		}));
+		const map = {};
+		am.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger,
+			(evt) => {
+				map[evt.sourceEvent.key] = (evt.sourceEvent.type == "keydown"); 
+			}));
 		
-		am.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, (evt) => {		
-			map[evt.sourceEvent.key] = (evt.sourceEvent.type == "keydown");
-		}));
+		am.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger,
+			(evt) => {
+				const key = evt.sourceEvent.key.toLowerCase();	
+        console.log('keyup', key);
+				map[key] = (evt.sourceEvent.type == "keydown");
+
+				switch(key) {
+				case 'z':
+					break;
+				case 'x':
+					break;
+				case 'c':
+					break;
+				case 'v':
+					this.isThirdCamera = !this.isThirdCamera;
+					break;
+				}
+			}));
+		scene.registerAfterRender(() => {
+			if ((map[''] || map[''])) {
+
+			}
+			if ((map[''] || map[''])) {
+
+			}
+		});
+	}
+
+/**
+ * 絶対値を制限する
+ * @param {number} v 
+ * @param {number} limit 
+ * @returns 
+ */
+	static limitAbs(v, limit) {
+		return Math.sign(v) * Math.min(Math.abs(v), limit);
 	}
 
 }
