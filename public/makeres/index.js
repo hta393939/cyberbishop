@@ -4,6 +4,14 @@
 
 class Misc {
     constructor() {
+        this.x = 1;
+    }
+
+    seq() {
+        const a = 214013;
+        const c = 2531011;
+        this.x = (this.x * a + c) & 0xffffffff;
+        return (this.x >> 16) & 0x7fff;
     }
 
     async init() {
@@ -11,6 +19,8 @@ class Misc {
     }
 
     makeGroundTex() {
+        const rr = 10;
+        const mod = rr * 2 + 1;
         const w = 512;
         const h = 512;
 /**
@@ -24,9 +34,10 @@ class Misc {
         for (let y = 0; y < h; ++y) {
             for (let x = 0; x < w; ++x) {
                 let offset = (x + w * y) * 4;
-                let r = 128;
-                let g = 128;
-                let b = 128;
+
+                let r = 128 + (this.seq() % mod) - rr;
+                let g = 128 + (this.seq() % mod) - rr;
+                let b = 128 + (this.seq() % mod) - rr;
                 let a = 255;
                 data.data[offset] = r;
                 data.data[offset+1] = g;
