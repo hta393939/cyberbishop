@@ -45,6 +45,7 @@ class Misc {
     }
 
     const _onResize = () => {
+      return;
       const el = document.documentElement;
       let w = el.clientWidth;
       let h = el.clientHeight;
@@ -131,6 +132,16 @@ class Misc {
       const ui = new UIClass();
       ui.addEventListener(UIClass.EVENT_CLICK, ev => {
         console.log('ev', ev.detail.v2winfo);
+        {
+          this.fireMain(this.scene,
+            this.my.mesh.absolutePosition,
+            this.my.mesh.absoluteRotationQuaternion);
+        }
+        {
+          this.fireSub(this.scene,
+            this.my.mesh.absolutePosition,
+            this.my.mesh.absoluteRotationQuaternion);
+        }
       });
       ui.init(scene);
     }
@@ -278,6 +289,57 @@ class Misc {
         { mass: 0, friction: 1, restitution: 0 },
         scene);
     }
+  }
+
+  fire(scene, pos, dirq) {
+    const shot = BABYLON.MeshBuilder.CreateBox(`box${Math.random()}`,
+      { width: 0.4, height: 0.4, depth: 1 },
+      scene);
+    shot.metadata = {
+      count: 60,
+      speed: 2,
+    };
+    shot.setAbsolutePosition(pos);
+    // 回転
+    //const mtx = BABYLON.Matrix.Identity();
+    //dirq.toRotationMatrix(mtx);
+    //const mtx = BABYLON.Matrix.RotationX(Math.PI * 30 / 180);
+    //shot.updatePoseMatrix(mtx);
+    shot.rotationQuaternion = dirq.clone();
+
+    // 常時移動するには???
+    const _moveShot = (inshot) => {
+      if (!(inshot?.metadata)) {
+        return;
+      }
+      inshot.metadata.count -= 1;
+      if (inshot.metadata.count <= 0) {
+        //scene.remove(shot);
+        inshot.dispose();
+        return;
+      }
+      const { speed } = inshot.metadata;
+      inshot.translate(new BABYLON.Vector3(0, 0, 1),
+        speed,
+      //  BABYLON.Space.LOCAL
+      );
+    }
+
+    scene.onBeforeRenderObservable.add(() => {
+      _moveShot(shot);
+    });
+  }
+
+  fireMain(scene, pos, dirq) {
+    this.fire(scene,
+      pos.add(new BABYLON.Vector3(-4, 4, 0).applyRotationQuaternion(dirq)),
+      dirq);
+  }
+
+  fireSub(scene, pos, dirq) {
+    this.fire(scene,
+      pos.add(new BABYLON.Vector3(4, 4, 0).applyRotationQuaternion(dirq)),
+      dirq);
   }
 
 /**
