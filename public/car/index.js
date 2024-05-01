@@ -17,6 +17,8 @@ class Misc {
     this.isThirdCamera = false;
     this.isThirdCamera = true;
 
+    this.shots = [];
+
     this.my = {
       mesh: null,
       pa: null,
@@ -29,7 +31,8 @@ class Misc {
 
     const param = {
       width: 960, // 論理ピクセル幅
-      height: 540,
+      //height: 540,
+      height: 720,
     };
     param.canvas = document.getElementById('maincanvas');
     await this.firstInit(param);
@@ -107,6 +110,7 @@ class Misc {
       new BABYLON.Vector3(0, 0, 0),
       scene);
     this.camera = camera;
+    camera.fov = Math.PI * 60 / 180;
     camera.setPosition(new BABYLON.Vector3(2, 5, 20));
     camera.wheelDeltaPrecentage = 0.01;
     //camera.attachControl();
@@ -148,17 +152,21 @@ class Misc {
 
     engine.runRenderLoop(() => {
       this.update();
-
-      if (this.isThirdCamera) {
-        this.updateThirdCamera();
-      }
-
       scene.render();
     });
   }
 
+/**
+ * 
+ */
   update() {
-    //this.applyForce();
+    const delta = this.scene.getEngine().getDeltaTime();
+
+    if (this.isThirdCamera) {
+      this.updateThirdCamera();
+    }
+
+    this.updateShot(delta);
 
     if (!this.joys[1]) {
       return;
@@ -196,6 +204,8 @@ class Misc {
     }
 
     this.readyInput(scene);
+
+    this.makeEnemy(scene);
   }
 
   makeCar(scene) {
@@ -274,7 +284,7 @@ class Misc {
   makeMap(scene) {
     console.log('makeMap');
 
-    {
+    { // 地面用テクスチャを生成する
       const tex = new BABYLON.Texture('./ground1.png', scene);
       this.groundtex = tex;
     }
@@ -296,8 +306,10 @@ class Misc {
       { width: 0.4, height: 0.4, depth: 1 },
       scene);
     shot.metadata = {
-      count: 60,
-      speed: 2,
+      target: this.enemy,
+      speed: 1,
+      duration: 0,
+      durationLimit: 5 * 1000,
     };
     shot.setAbsolutePosition(pos);
     // 回転
@@ -307,27 +319,7 @@ class Misc {
     //shot.updatePoseMatrix(mtx);
     shot.rotationQuaternion = dirq.clone();
 
-    // 常時移動するには???
-    const _moveShot = (inshot) => {
-      if (!(inshot?.metadata)) {
-        return;
-      }
-      inshot.metadata.count -= 1;
-      if (inshot.metadata.count <= 0) {
-        //scene.remove(shot);
-        inshot.dispose();
-        return;
-      }
-      const { speed } = inshot.metadata;
-      inshot.translate(new BABYLON.Vector3(0, 0, 1),
-        speed,
-      //  BABYLON.Space.LOCAL
-      );
-    }
-
-    scene.onBeforeRenderObservable.add(() => {
-      _moveShot(shot);
-    });
+    this.shots.push(shot);
   }
 
   fireMain(scene, pos, dirq) {
@@ -340,6 +332,52 @@ class Misc {
     this.fire(scene,
       pos.add(new BABYLON.Vector3(4, 4, 0).applyRotationQuaternion(dirq)),
       dirq);
+  }
+
+/**
+ * 
+ * @param {number} delta 経過ミリ秒数
+ */
+  updateShot(delta) {
+    for (let i = this.shots.length - 1; i >= 0; --i) {
+      const shot = this.shots[i];
+    // 常時移動するには???
+      const metadata = shot?.metadata;
+      if (!metadata) {
+        shot.dispose();
+        this.shots.splice(i, 1);
+        continue;
+      }
+      metadata.duration += delta;
+      if (metadata.duration >= metadata.durationLimit) {
+        shot.dispose();
+        this.shots.splice(i, 1);
+        continue;
+      }
+
+      const dir = new BABYLON.Vector3(0, 0, 1);
+      dir.applyRotationQuaternion(shot.absoluteRotationQuaternion);
+
+      const { speed, target } = metadata;
+      if (target) {
+        if (target?.mesh?.metadata?.enabled) {
+          const m = target.mesh;
+          const tdir = m.absolutePosition.subtract(shot.absolutePosition).normalize();
+          const dp = Math.acos(BABYLON.Vector3.Dot(dir, tdir));
+          const cp = dir.cross(tdir);
+          
+          shot.rotate(cp,
+            -Math.min(dp, Math.PI * 0.5 / 180),
+            BABYLON.Space.WORLD);
+          
+        }
+      }
+
+      shot.translate(new BABYLON.Vector3(0, 0, 1),
+        speed,
+      //  BABYLON.Space.LOCAL
+      );
+    }
   }
 
 /**
@@ -450,11 +488,11 @@ class Misc {
     const fs = [
       {
         offset: new BABYLON.Vector3(1, 0, 0),
-        power: new BABYLON.Vector3(0, 0, 1 + Math.sign(param.dx)),
+        power: new BABYLON.Vector3(0, 0, 2 * (1 + Math.sign(param.dx))),
       },
       {
         offset: new BABYLON.Vector3(-1, 0, 0),
-        power: new BABYLON.Vector3(0, 0, + Math.sign(param.dy)),
+        power: new BABYLON.Vector3(0, 0, + 2 * Math.sign(param.dy)),
       },
     ];
     for (const f of fs) { // 入力を姿勢で変換する
@@ -502,7 +540,7 @@ class Misc {
     const fw = new BABYLON.Vector3(0, 0, 1).applyRotationQuaternion(q);
 
     const height = 10;
-    const back = 40;
+    const back = 30 - 4;
 
     const target = center.add(up.scale(height));
     const pos = target.add(fw.scale(-back));
@@ -582,6 +620,17 @@ class Misc {
     });
 */
 
+  }
+
+  makeEnemy(scene) {
+    const m = BABYLON.MeshBuilder.CreateCylinder(`cyl${Math.random()}`,
+      { diameterTop: 6, diameterBottom: 2 },
+      scene);
+    m.metadata = { enabled: true };
+    m.setAbsolutePosition(new BABYLON.Vector3(-3, 5, -10));
+    this.enemy = {
+      mesh: m,
+    };
   }
 
 /**
