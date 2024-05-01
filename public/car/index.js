@@ -31,8 +31,8 @@ class Misc {
 
     const param = {
       width: 960, // 論理ピクセル幅
-      //height: 540,
-      height: 720,
+      height: 540,
+      //height: 720,
     };
     param.canvas = document.getElementById('maincanvas');
     await this.firstInit(param);
@@ -303,13 +303,13 @@ class Misc {
 
   fire(scene, pos, dirq) {
     const shot = BABYLON.MeshBuilder.CreateBox(`box${Math.random()}`,
-      { width: 0.4, height: 0.4, depth: 1 },
+      { width: 0.4, height: 0.4, depth: 2 },
       scene);
     shot.metadata = {
       target: this.enemy,
       speed: 1,
       duration: 0,
-      durationLimit: 5 * 1000,
+      durationLimit: 3 * 1000,
     };
     shot.setAbsolutePosition(pos);
     // 回転
@@ -324,13 +324,13 @@ class Misc {
 
   fireMain(scene, pos, dirq) {
     this.fire(scene,
-      pos.add(new BABYLON.Vector3(-4, 4, 0).applyRotationQuaternion(dirq)),
+      pos.add(new BABYLON.Vector3(-4, 2, 0).applyRotationQuaternion(dirq)),
       dirq);
   }
 
   fireSub(scene, pos, dirq) {
     this.fire(scene,
-      pos.add(new BABYLON.Vector3(4, 4, 0).applyRotationQuaternion(dirq)),
+      pos.add(new BABYLON.Vector3(4, 2, 0).applyRotationQuaternion(dirq)),
       dirq);
   }
 
@@ -355,8 +355,8 @@ class Misc {
         continue;
       }
 
-      const dir = new BABYLON.Vector3(0, 0, 1);
-      dir.applyRotationQuaternion(shot.absoluteRotationQuaternion);
+      const q = shot.absoluteRotationQuaternion.clone();
+      const dir = new BABYLON.Vector3(0, 0, 1).applyRotationQuaternion(q); // new vector
 
       const { speed, target } = metadata;
       if (target) {
@@ -367,9 +367,9 @@ class Misc {
           const cp = dir.cross(tdir);
           
           shot.rotate(cp,
-            -Math.min(dp, Math.PI * 0.5 / 180),
-            BABYLON.Space.WORLD);
-          
+            Math.min(dp, Math.PI * 0.5 / 180),
+            BABYLON.Space.WORLD
+          );
         }
       }
 

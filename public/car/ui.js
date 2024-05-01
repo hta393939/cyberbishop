@@ -29,11 +29,14 @@ export class UIClass extends EventTarget {
 
     {
       const button = BABYLON.GUI.Button.CreateSimpleButton('loading1', 'loading...');
+      //button.top = '-200px';
       const tb = button.textBlock;
+      tb.top = '-160px';
       tb.outlineWidth = 10;
       tb.outlineColor = 'white';
       tb.style = mainStyle;
 
+      advancedTexture.addControl(button);
       advancedTexture.addControl(tb);
     }
 
