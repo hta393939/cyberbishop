@@ -264,7 +264,7 @@ class Misc {
     console.log('makeMap');
 
     {
-      const tex = new BABYLON.Texture('./res/ground1.png', scene);
+      const tex = new BABYLON.Texture('./ground1.png', scene);
       this.groundtex = tex;
     }
 
