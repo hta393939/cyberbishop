@@ -2,7 +2,7 @@
  * @file index.js
  */
 
-import { UIClass } from "./ui";
+import { UIClass } from "./ui.js";
 
 class Misc {
   static STORAGE_SLOW = 'slow';
@@ -89,6 +89,10 @@ class Misc {
     console.log('initEffek', context);
   }
 
+/**
+ * canvas を描画する必要最低限
+ * @param {*} param 
+ */
   firstInit(param) {
     console.log('firstInit', param);
 
@@ -121,6 +125,14 @@ class Misc {
         new BABYLON.Vector3(1, 5, 4),
         //new BABYLON.Vector3(1, 1, 1),
         scene);
+    }
+
+    {
+      const ui = new UIClass();
+      ui.addEventListener(UIClass.EVENT_CLICK, ev => {
+        console.log('ev', ev.detail.v2winfo);
+      });
+      ui.init(scene);
     }
 
     engine.runRenderLoop(() => {
@@ -441,6 +453,7 @@ class Misc {
  * 入力の反映
  */
   readyInput(scene) {
+
     scene.onPointerMove = () => {
       console.log('onPointerMove', scene.pointerX, scene.pointerY);
       const ray = scene.createPickingRay(
@@ -468,7 +481,9 @@ class Misc {
         });
       }
     };
+    
 
+    /*
     const am = new BABYLON.ActionManager(scene);
     this.actionManager = am;
     const map = {};
@@ -503,6 +518,8 @@ class Misc {
 
       }
     });
+*/
+
   }
 
 /**
