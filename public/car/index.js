@@ -137,14 +137,10 @@ class Misc {
       ui.addEventListener(UIClass.EVENT_CLICK, ev => {
         console.log('ev', ev.detail.v2winfo);
         {
-          this.fireMain(this.scene,
-            this.my.mesh.absolutePosition,
-            this.my.mesh.absoluteRotationQuaternion);
+          this.fireMain(this.my.mesh);
         }
         {
-          this.fireSub(this.scene,
-            this.my.mesh.absolutePosition,
-            this.my.mesh.absoluteRotationQuaternion);
+          this.fireSub(this.my.mesh);
         }
       });
       ui.init(scene);
@@ -161,6 +157,15 @@ class Misc {
  */
   update() {
     const delta = this.scene.getEngine().getDeltaTime();
+
+    if (this.padManager) {
+      for (const pad of this.padManager.gamepads) {
+        if (!pad || !pad.isConnected) {
+          continue;
+        }
+        this.updateByPad(pad);
+      }
+    }
 
     if (this.isThirdCamera) {
       this.updateThirdCamera();
@@ -218,6 +223,16 @@ class Misc {
         scene);
       console.log('bodyMesh', bodyMesh.name, bodyMesh);
       bodyMesh.position.y = 3;
+
+      {
+        const m = BABYLON.MeshBuilder.CreateCylinder('cyl7',
+          { height: 7,
+            diameterTop: 2, diameterBottom: 7 },
+          scene);
+        m.rotation = new BABYLON.Vector3(Math.PI * 0.5, 0, 0);
+        m.setParent(bodyMesh);
+      }
+
       const param = {
         mass: 1,
         friction: 1,
@@ -227,6 +242,8 @@ class Misc {
         BABYLON.PhysicsShapeType.CONVEX_HULL,
         param);
       this.pa = pa;
+
+      pa.body.startAsleep = true;
 
       this.my = {
         mesh: bodyMesh,
@@ -317,19 +334,33 @@ class Misc {
     //dirq.toRotationMatrix(mtx);
     //const mtx = BABYLON.Matrix.RotationX(Math.PI * 30 / 180);
     //shot.updatePoseMatrix(mtx);
-    shot.rotationQuaternion = dirq.clone();
+    shot.rotationQuaternion = dirq;
 
     this.shots.push(shot);
   }
 
-  fireMain(scene, pos, dirq) {
-    this.fire(scene,
+  fireMain(mesh) {
+    if (!mesh) {
+      return;
+    }
+
+    const pos = mesh.absolutePosition;
+    const dirq = mesh.absoluteRotationQuaternion.clone();
+
+    this.fire(this.scene,
       pos.add(new BABYLON.Vector3(-4, 2, 0).applyRotationQuaternion(dirq)),
       dirq);
   }
 
-  fireSub(scene, pos, dirq) {
-    this.fire(scene,
+  fireSub(mesh) {
+    if (!mesh) {
+      return;
+    }
+
+    const pos = mesh.absolutePosition;
+    const dirq = mesh.absoluteRotationQuaternion.clone();
+
+    this.fire(this.scene,
       pos.add(new BABYLON.Vector3(4, 2, 0).applyRotationQuaternion(dirq)),
       dirq);
   }
@@ -454,7 +485,8 @@ class Misc {
     const hnum = 4;
     for (let i = 0; i < wnum * hnum; ++i) {
       const param = {
-        adds: [0.4, 0.1, 0.2, 0.3],
+        //adds: [0.4, 0.1, 0.2, 0.3],
+        adds: [0, 0, 0, 0],
         center: [
           ((i & 3) * 2 - wnum + 1) * half,
           -5,
@@ -471,6 +503,11 @@ class Misc {
     }
   }
 
+/**
+ * 力加えて移動
+ * @param {*} param 
+ * @returns 
+ */
   applyForce(param) {
     const m = this.my?.mesh;
     if (!m) {
@@ -485,14 +522,21 @@ class Misc {
     const q = m.absoluteRotationQuaternion;
     const center = m.absolutePosition.clone();
 
+    const scale = 4;
     const fs = [
-      {
+      { // 左のポイント
         offset: new BABYLON.Vector3(1, 0, 0),
-        power: new BABYLON.Vector3(0, 0, 2 * (1 + Math.sign(param.dx))),
+        power: new BABYLON.Vector3(
+          scale * (param.lx ?? 0),
+          0,
+          scale * (param.ly ?? 0 + param.dx ?? 0))
       },
-      {
+      { // 右のポイント
         offset: new BABYLON.Vector3(-1, 0, 0),
-        power: new BABYLON.Vector3(0, 0, + 2 * Math.sign(param.dy)),
+        power: new BABYLON.Vector3(
+          scale * (param.rx ?? 0),
+          0,
+          scale * (param.ry ?? 0 + param.dy ?? 0)),
       },
     ];
     for (const f of fs) { // 入力を姿勢で変換する
@@ -527,6 +571,10 @@ class Misc {
     body.setAngularVelocity(ang);
   }
 
+/**
+ * TPSカメラとしてlookAtと位置を更新する
+ * @returns 
+ */
   updateThirdCamera() {
     const camera = this.camera;
     const m = this.my.mesh;
@@ -547,6 +595,44 @@ class Misc {
 
     camera.target = target;
     camera.setPosition(pos);
+  }
+
+/**
+ * 
+ * @see https://doc.babylonjs.com/typedoc/classes/BABYLON.GenericPad#leftStick
+ * @param {BABYLON.GenericPad} pad 
+ */
+  updateByPad(pad) {
+    const left = pad.leftStick; // x, y
+    const right = pad.rightStick;
+    //console.log('bypad', left, right, pad);
+    this.applyForce({
+      lx: -left.x, ly: -left.y,
+      rx: -right.x, ry: -right.y,
+    });
+  }
+
+  readyPadInput(pad) {
+// 変更できる
+    pad._rightStickAxisX = 5;
+    pad._rightStickAxisY = 2;
+
+    pad.onButtonDownObservable.add((index) => {
+      console.log('down observe', index,
+        new Date().toLocaleTimeString()); // 連打どうなるの?
+      const LEFTUPPER = 4;
+      const RIGHTUPPER = 5;
+      const LEFTLOWER = 6;
+      const RIGHTLOWER = 7;
+      switch(index) {
+      case LEFTUPPER:
+        this.fireSub(this.my?.mesh);
+        break;
+      case RIGHTUPPER:
+        this.fireMain(this.my?.mesh);
+        break;
+      }
+    });
   }
 
 /**
@@ -574,51 +660,51 @@ class Misc {
       }
 
       {
-        const dx = scene.pointerX - 300;
-        const dy = scene.pointerY - 150;
+        const dx = (scene.pointerX - 400) / 400;
+        const dy = (scene.pointerY - 300) / 300;
         this.applyForce({
           dx, dy,
         });
       }
     };
     
+    scene.onKeyboardObservable.add(kbInfo => {
+      console.log('scene keyboard', kbInfo);
+      switch(kbInfo.type) {
+      case BABYLON.KeyboardEventTypes.KEYDOWN:
+        break;
 
-    /*
-    const am = new BABYLON.ActionManager(scene);
-    this.actionManager = am;
-    const map = {};
-    am.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger,
-      (evt) => {
-        map[evt.sourceEvent.key] = (evt.sourceEvent.type == "keydown"); 
-      }));
-    
-    am.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger,
-      (evt) => {
-        const key = evt.sourceEvent.key.toLowerCase();	
-        console.log('keyup', key);
-        map[key] = (evt.sourceEvent.type == "keydown");
-
-        switch(key) {
-        case 'z':
-          break;
-        case 'x':
-          break;
-        case 'c':
-          break;
-        case 'v':
-          this.isThirdCamera = !this.isThirdCamera;
-          break;
+      case BABYLON.KeyboardEventTypes.KEYUP:
+        switch(kbInfo.event.key.toLowerCase()) {
+          case 'z':
+            break;
+          case 'x':
+            this.fireMain(this.my.mesh);
+            break;
+          case 'c':
+            this.fireSub(this.my.mesh);
+            break;
+          case 'v':
+            this.isThirdCamera = !this.isThirdCamera;
+            break;
         }
-      }));
-    scene.registerAfterRender(() => {
-      if ((map[''] || map[''])) {
-
+        break;
       }
-      if ((map[''] || map[''])) {
 
-      }
     });
-*/
+
+    { // パッド観察
+      const padManager = new BABYLON.GamepadManager(scene);
+      this.padManager = padManager;
+      padManager.onGamepadConnectedObservable.add((pad) => {
+        console.log('connected', pad);
+
+        this.readyPadInput(pad);
+      });
+      padManager.onGamepadDisconnectedObservable.add((pad) => {
+        console.log('disconnected', pad);
+      });
+    }
 
   }
 
