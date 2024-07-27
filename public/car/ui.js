@@ -4,8 +4,71 @@
 
 export class UIClass extends EventTarget {
   static EVENT_CLICK = 'click';
+  static EVENT_ACTION = 'action';
+
   constructor() {
     super();
+
+    this.userActions = {
+      mainshot: {
+        key: 'z',
+      },
+      subshot: {
+        key: 'x',
+      },
+      onefront: {
+        key: 'w',
+      },
+      oneback: {
+        key: 's',
+      },
+      oneleft: {
+        key: 'a',
+      },
+      oneright: {
+        key: 'd',
+      },
+    };
+    this.userActions.keys = Object.keys(this.userActions);
+  }
+
+  /**
+   * 
+   * @param {KeyboardEvent} ev 
+   */
+  findAction(ev) {
+    /**
+     * @type {string[]}
+     */
+    const keys = this.userActions.keys;
+    const index = keys.indexOf(ev.code);
+    if (index < 0) {
+      return null;
+    }
+    return keys[index];
+  }
+
+  initKeyHandler() {
+    console.log('initKeyHandler');
+    window.addEventListener('keydown', ev => {
+      console.log('keydown fire');
+      const result = this.findAction(ev);
+      const cev = new CustomEvent(UIClass.EVENT_ACTION, {
+        detail: Object.assign(ev, {
+          actiontype: result,
+        }),
+      });
+      this.dispatchEvent(cev);
+    });
+    window.addEventListener('keyup', ev => {
+      const result = this.findAction(ev);
+      const cev = new CustomEvent(UIClass.EVENT_ACTION, {
+        detail: Object.assign(ev, {
+          actiontype: result,
+        }),
+      });
+      this.dispatchEvent(cev);
+    });
   }
 
 /**
@@ -65,7 +128,7 @@ export class UIClass extends EventTarget {
     {
       const panel = new BABYLON.GUI.StackPanel();
       panel.left = '-200px';
-      panel.width = '256px';
+      panel.width = '512px'; // 幅
       panel.isVertical = false;
       advancedTexture.addControl(panel);
 
@@ -90,8 +153,21 @@ export class UIClass extends EventTarget {
         tb.style = mainStyle;
         panel.addControl(tb);
       }
+      {
+        const tb = new BABYLON.GUI.TextBlock();
+        tb.text = 'waldo';
+        tb.width = '160px';
+        tb.color = 'white';
+        tb.outlineWidth = 8;
+        tb.outlineColor = 'black';
+        tb.style = mainStyle;
+        panel.addControl(tb);
+
+        this.tbFPS = tb;
+      }
     }
 
+    this.initKeyHandler();
   }
 }
 

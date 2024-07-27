@@ -4,6 +4,96 @@
 
 import { UIClass } from "./ui.js";
 
+class IPhysicsCollisionEvent {
+  constructor() {
+    this.collidedAgainst;
+    this.collider;
+    this.distance = 0;
+    this.impulse = 0;
+    this.normal;
+    this.point;
+    /**
+     * @type {PhysicsEventType}
+     * COLLISION_* or TRIGGER_*
+     */
+    this.type;
+  }
+}
+
+class MeshColli {
+  constructor() {
+    this.meshes = [];
+    this.meshes2 = [];
+  }
+
+  init(scene) {
+    // 
+    // 
+    // 
+  }
+
+  check() {
+    for (const m of this.meshes) {
+      for (const m2 of this.meshes2) {
+        /**
+         * @type {boolean}
+         */
+        const result = m.intersectsMesh(m2);
+      }
+    }
+  }
+
+}
+
+class PhyColli {
+  constructor() {
+
+  }
+
+  init(scene) {
+    for (let i = 0; i < 100; ++i) {
+      const box = BABYLON.MeshBuilder.CreateBox(
+        `box${i}`,
+        {
+          width: 1,
+          height: 1,
+          depth: 2,
+        },
+        scene,
+      );
+      box.position = new BABYLON.Vector3(i, 10, 0);
+      const pa = new BABYLON.PhysicsAggregate(
+        box,
+        BABYLON.PhysicsShapeType.BOX,
+        {
+          mass: 2,
+          friction: 0,
+        },
+        scene,
+      );
+    }
+  }
+
+  /**
+   * 床相当にのみ処理関数を追加する
+   * @param {BABYLON.PhysicsAggregate} pa 
+   */
+  setToFloor(pa) {
+    pa.body.getCollisionObservable().add((colliev) => {
+      //console.log('colli ob', colliev);
+    });
+
+    pa.body.getCollisionEndedObservable().add((colliev) => {
+      //console.log('colli end ob', colliev);
+    });
+
+    pa.body.setCollisionCallbackEnabled(true);
+    pa.body.setCollisionEndedCallbackEnabled(true);
+  }
+
+}
+
+
 class Misc {
   static STORAGE_SLOW = 'slow';
   static STORAGE_FAST = 'fast';
@@ -14,8 +104,11 @@ class Misc {
     this.joys = [null, null];
     this.isTop = true;
 
+    /**
+     * 3rd カメラ計算を実行するかしないか
+     */
     this.isThirdCamera = false;
-    this.isThirdCamera = true;
+    //this.isThirdCamera = true;
 
     this.shots = [];
 
@@ -23,6 +116,8 @@ class Misc {
       mesh: null,
       pa: null,
     };
+
+    this.ts = [];
   }
 
   async init() {
@@ -68,14 +163,24 @@ class Misc {
       _onResize();
     }
 
+    { // 物理衝突検討
+      const colli = new PhyColli();
+      this.phycolli = colli;
+      //colli.init(this.scene);
+    }
+
     await this.secondInit(this.scene);
+
+    {
+      this.phycolli.init(this.scene);
+    }
   }
 
   saveSetting() {
     try {
       const obj = {};
       localStorage.setItem(Misc.STORAGE_SLOW, JSON.stringify(obj));
-    } catch(e) {
+    } catch (e) {
 
     }
   }
@@ -84,7 +189,7 @@ class Misc {
     try {
       const text = localStorage.getItem(Misc.STORAGE_SLOW);
       const obj = JSON.parse(text);
-    } catch(e) {
+    } catch (e) {
 
     }
   }
@@ -113,7 +218,9 @@ class Misc {
     camera.fov = Math.PI * 60 / 180;
     camera.setPosition(new BABYLON.Vector3(2, 5, 20));
     camera.wheelDeltaPrecentage = 0.01;
-    //camera.attachControl();
+    if (!this.isThirdCamera) {
+      camera.attachControl();
+    }
 
     if (false) {
       const light = new BABYLON.PointLight('light1',
@@ -134,14 +241,20 @@ class Misc {
 
     {
       const ui = new UIClass();
+      this.ui = ui;
       ui.addEventListener(UIClass.EVENT_CLICK, ev => {
         console.log('ev', ev.detail.v2winfo);
         {
-          this.fireMain(this.my.mesh);
+          this.fireMain(this.my?.mesh);
         }
         {
-          this.fireSub(this.my.mesh);
+          this.fireSub(this.my?.mesh);
         }
+      });
+      ui.addEventListener(UIClass.EVENT_ACTION, ev => {
+        console.log('action fire', ev);
+        this.fireMain(this.my?.mesh);
+
       });
       ui.init(scene);
     }
@@ -153,10 +266,26 @@ class Misc {
   }
 
 /**
- * 
+ * 高頻度に更新する
  */
   update() {
     const delta = this.scene.getEngine().getDeltaTime();
+
+    {
+      const now = Date.now();
+      this.ts.push(now);
+      this.ts = this.ts.filter(ts => {
+        return (now - ts < 3000);
+      });
+      const num = this.ts.length;
+      let fps = num / 3;
+      {
+        const tb = this.ui?.tbFPS;
+        if (tb) {
+          tb.text = `${fps.toFixed(1)} [fps]`;
+        }
+      }
+    }
 
     if (this.padManager) {
       for (const pad of this.padManager.gamepads) {
@@ -469,8 +598,12 @@ class Misc {
     const pa = new BABYLON.PhysicsAggregate(
       m,
       BABYLON.PhysicsShapeType.CONVEX_HULL,
-      { mass: 0, restitution: 0 }
+      {mass: 0, restitution: 0},
     );
+
+    { // TODO: 物理
+      this.phycolli?.setToFloor(pa);
+    }
   }
 
   makeAreas(scene) {
@@ -641,7 +774,7 @@ class Misc {
   readyInput(scene) {
 
     scene.onPointerMove = () => {
-      console.log('onPointerMove', scene.pointerX, scene.pointerY);
+      //console.log('onPointerMove', scene.pointerX, scene.pointerY);
       const ray = scene.createPickingRay(
         scene.pointerX,
         scene.pointerY,
