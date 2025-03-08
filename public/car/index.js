@@ -112,8 +112,6 @@ class Misc {
     this.isThirdCamera = false;
     //this.isThirdCamera = true;
 
-    this.shots = [];
-
     this.my = {
       mesh: null,
       pa: null,
@@ -246,17 +244,9 @@ class Misc {
       this.ui = ui;
       ui.addEventListener(UIClass.EVENT_CLICK, ev => {
         console.log('ev', ev.detail.v2winfo);
-        {
-          this.fireMain(this.my?.mesh);
-        }
-        {
-          this.fireSub(this.my?.mesh);
-        }
       });
       ui.addEventListener(UIClass.EVENT_ACTION, ev => {
         console.log('action fire', ev);
-        this.fireMain(this.my?.mesh);
-
       });
       ui.init(scene);
     }
@@ -267,9 +257,9 @@ class Misc {
     });
   }
 
-/**
- * 高頻度に更新する
- */
+  /**
+   * 高頻度に更新する
+   */
   update() {
     const delta = this.scene.getEngine().getDeltaTime();
 
@@ -301,8 +291,6 @@ class Misc {
     if (this.isThirdCamera) {
       this.updateThirdCamera();
     }
-
-    this.updateShot(delta);
 
     if (!this.joys[1]) {
       return;
@@ -451,184 +439,6 @@ class Misc {
         BABYLON.PhysicsShapeType.BOX,
         { mass: 0, friction: 1, restitution: 0 },
         scene);
-    }
-  }
-
-  /**
-   * ショットを放つ
-   * @param {*} scene 
-   * @param {*} pos 
-   * @param {*} dirq 
-   */
-  fire(scene, pos, dirq) {
-    const shot = BABYLON.MeshBuilder.CreateBox(
-      `box${Math.random()}`,
-      { width: 0.4, height: 0.4, depth: 2 },
-      scene,
-    );
-    shot.metadata = {
-      keywords: ['controlshot'],
-      target: this.enemy,
-      speed: 1,
-      duration: 0,
-      durationLimit: 3 * 1000,
-    };
-    shot.setAbsolutePosition(pos);
-    // 回転
-    //const mtx = BABYLON.Matrix.Identity();
-    //dirq.toRotationMatrix(mtx);
-    //const mtx = BABYLON.Matrix.RotationX(Math.PI * 30 / 180);
-    //shot.updatePoseMatrix(mtx);
-    shot.rotationQuaternion = dirq;
-
-    {
-      const pa = new BABYLON.PhysicsAggregate(
-        shot,
-        BABYLON.PhysicsShapeType.BOX,
-        {
-          restitution: 0,
-        },
-        scene,
-      );
-      pa.body.setGravityFactor(0);
-      //pa.body.disablePreStep = false;
-
-      pa.body.getCollisionObservable().add((colliev) => {
-        console.log('fire colliev', colliev);
-        pa.body.setCollisionCallbackEnabled(false);
-      });
-      pa.body.setCollisionCallbackEnabled(true);
-    }
-
-    this.shots.push(shot);
-    // 通常の移動ショットここまで
-
-    this.phyfire(scene, pos, dirq);
-  }
-
-  /**
-   * ショットを放つ
-   * @param {*} scene 
-   * @param {*} pos 
-   * @param {*} dirq 
-   */
-  phyfire(scene, pos, dirq) {
-    const shot = BABYLON.MeshBuilder.CreateBox(
-      `box${Math.random()}`,
-      { width: 0.4 * 5, height: 0.4, depth: 2 },
-      scene,
-    );
-    shot.metadata = {
-      keywords: ['physhot'],
-      target: this.enemy,
-      speed: 1,
-      duration: 0,
-      durationLimit: 3 * 1000,
-    };
-    shot.setAbsolutePosition(pos);
-    // 回転
-    //const mtx = BABYLON.Matrix.Identity();
-    //dirq.toRotationMatrix(mtx);
-    //const mtx = BABYLON.Matrix.RotationX(Math.PI * 30 / 180);
-    //shot.updatePoseMatrix(mtx);
-    shot.rotationQuaternion = dirq;
-
-    {
-      const pa = new BABYLON.PhysicsAggregate(
-        shot,
-        BABYLON.PhysicsShapeType.BOX,
-        {
-          restitution: 0,
-        },
-        scene,
-      );
-      pa.body.setGravityFactor(0);
-      //pa.body.disablePreStep = false;
-
-      pa.body.getCollisionObservable().add((colliev) => {
-        console.log('fire colliev', colliev);
-        pa.body.setCollisionCallbackEnabled(false);
-      });
-      pa.body.setCollisionCallbackEnabled(true);
-
-      // TODO: 力をかけて前進させてみたい
-      const power = new BABYLON.Vector3(0, 0, 1).applyRotationQuaternion(dirq);
-      const location = pos.clone();
-      pa.body.applyImpulse(power, location);
-    }
-
-    //this.shots.push(shot);
-  }
-
-  fireMain(mesh) {
-    if (!mesh) {
-      return;
-    }
-
-    const pos = mesh.absolutePosition;
-    const dirq = mesh.absoluteRotationQuaternion.clone();
-
-    this.fire(this.scene,
-      pos.add(new BABYLON.Vector3(-4, 2, 0).applyRotationQuaternion(dirq)),
-      dirq);
-  }
-
-  fireSub(mesh) {
-    if (!mesh) {
-      return;
-    }
-
-    const pos = mesh.absolutePosition;
-    const dirq = mesh.absoluteRotationQuaternion.clone();
-
-    this.fire(this.scene,
-      pos.add(new BABYLON.Vector3(4, 2, 0).applyRotationQuaternion(dirq)),
-      dirq);
-  }
-
-  /**
-   * 
-   * @param {number} delta 経過ミリ秒数
-   */
-  updateShot(delta) {
-    for (let i = this.shots.length - 1; i >= 0; --i) {
-      const shot = this.shots[i];
-    // 常時移動するには???
-      const metadata = shot?.metadata;
-      if (!metadata) {
-        shot.dispose();
-        this.shots.splice(i, 1);
-        continue;
-      }
-      metadata.duration += delta;
-      if (metadata.duration >= metadata.durationLimit) {
-        shot.dispose();
-        this.shots.splice(i, 1);
-        continue;
-      }
-
-      const q = shot.absoluteRotationQuaternion.clone();
-      const dir = new BABYLON.Vector3(0, 0, 1).applyRotationQuaternion(q); // new vector
-
-      const { speed, target } = metadata;
-      if (target) {
-        if (target?.mesh?.metadata?.enabled) {
-          const m = target.mesh;
-          const tdir = m.absolutePosition.subtract(shot.absolutePosition).normalize();
-          const dp = Math.acos(BABYLON.Vector3.Dot(dir, tdir));
-          const cp = dir.cross(tdir);
-          
-          shot.rotate(cp,
-            Math.min(dp, Math.PI * 0.5 / 180),
-            BABYLON.Space.WORLD
-          );
-        }
-      }
-
-      shot.translate(new BABYLON.Vector3(0, 0, 1),
-        speed,
-      //  BABYLON.Space.LOCAL
-      );
     }
   }
 
@@ -894,10 +704,8 @@ class Misc {
       const RIGHTLOWER = 7;
       switch(index) {
       case LEFTUPPER:
-        this.fireSub(this.my?.mesh);
         break;
       case RIGHTUPPER:
-        this.fireMain(this.my?.mesh);
         break;
       }
     });
@@ -947,10 +755,8 @@ class Misc {
           case 'z':
             break;
           case 'x':
-            this.fireMain(this.my.mesh);
             break;
           case 'c':
-            this.fireSub(this.my.mesh);
             break;
           case 'v':
             this.isThirdCamera = !this.isThirdCamera;
