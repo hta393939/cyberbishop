@@ -325,8 +325,8 @@ class Misc {
       havokPlugin);
 
     this.makeCar(scene);
-    //this.makeMap(scene);
-    this.makeAreas(scene);
+    this.makeMap(scene);
+    //this.makeAreas(scene);
     //this.makeWall(scene);
 
     this.readyInput(scene);
@@ -344,14 +344,16 @@ class Misc {
     { // body
       const radius = tireRadius;
       const h1 = obj.height - (obj.height - radius) / 2;
+
       const d2 = obj.depth / 2;
+      const dfbase = d2 * 0.75;
       const d1 = d2 / 2;
       const dback = obj.depth * 0.5 * 0.75;
       const shape = [
         [-d2, radius, 0], // 左下
         [ d2, radius, 0], // 右下
         [ d2, h1, 0], // 右中
-        [ d1, h1, 0],
+        [ d1 * 0 + dfbase, h1, 0],
         [ d1, obj.height, 0], // 中右上
         [-dback, obj.height, 0], // 中左上
         [-d2, h1, 0], // 中左中
@@ -386,6 +388,7 @@ class Misc {
       this.pa = pa;
 
       pa.body.startAsleep = true;
+      pa.body.setLinearDamping(0);
 
       pa.shape.filterMembershipMask = Misc.BIT_BODY;
       pa.shape.filterCollideMask = Misc.BIT_GROUND;
@@ -434,8 +437,6 @@ class Misc {
           path: paths.map(v => new BABYLON.Vector3(...v)),
         },
         scene);
-      // 位置を指定
-      //param.x *= 2;
       m.position = new BABYLON.Vector3(param.x, param.y, param.z);
       m.material = tireMtl;
 
@@ -446,6 +447,8 @@ class Misc {
         scene);
       pa.shape.filterMembershipMask = Misc.BIT_TIRE;
       pa.shape.filterCollideMask = Misc.BIT_GROUND;
+
+      pa.body.setLinearDamping(0);
 
       const xAxis = new BABYLON.Vector3(1, 0, 0);
       const hinge = new BABYLON.HingeConstraint(
@@ -459,7 +462,7 @@ class Misc {
 
   }
 
-/*
+  /** 1枚の地面を作成する */
   makeMap(scene) {
     console.log('makeMap');
 
@@ -467,18 +470,26 @@ class Misc {
       const tex = new BABYLON.Texture('./ground1.png', scene);
       this.groundtex = tex;
     }
+    const tex = new BABYLON.DynamicTexture('tex1',
+      { width: 1024, height: 1024 }, scene);
+    Misc.writeCanvas(tex.getContext());
+    tex.update();
 
     {
       const ground = BABYLON.MeshBuilder.CreateGround('ground1',
-        { width: 100, height: 100 },
+        { width: 1000, height: 1000 },
         scene);
-      ground.setAbsolutePosition(new BABYLON.Vector3(0, -5, 0));
+      const mtl = new BABYLON.StandardMaterial();
+      mtl.diffuseTexture = tex;
+      ground.material = mtl;
+
+      ground.setAbsolutePosition(new BABYLON.Vector3(0, -0.2, 0));
       const pa = new BABYLON.PhysicsAggregate(ground,
         BABYLON.PhysicsShapeType.BOX,
         { mass: 0, friction: 1, restitution: 0 },
         scene);
     }
-  }*/
+  }
 
   /**
    * 
@@ -893,6 +904,40 @@ class Misc {
    */
   static limitAbs(v, limit) {
     return Math.sign(v) * Math.min(Math.abs(v), limit);
+  }
+
+  /**
+   * テクスチャ用canvasを生成する
+   * @returns {OffscreenCanvas}
+   */
+  static writeCanvas(c) {
+    const w = c.canvas.width;
+    const h = c.canvas.height;
+    /*
+    const canvas = new OffscreenCanvas(w, h);
+    const c = canvas.getContext('2d');
+    */
+    const data = c.getImageData(0, 0, w, h);
+    for (let i = 0; i < h; ++i) {
+      for (let j = 0; j < w; ++j) {
+        const offset = (j + i * w) * 4;
+        let r = 256 * j / w;
+        let g = 128;
+        let b = 256 * (h - i) / h;
+        let a = 255;
+        if ((i + j) % 2 === 0) {
+          r = 32;
+          g = 255;
+          b = 32;
+        }
+        data.data[offset + 0] = r;
+        data.data[offset + 1] = g;
+        data.data[offset + 2] = b;
+        data.data[offset + 3] = a;
+      }
+    }
+    c.putImageData(data, 0, 0);
+    //return canvas;
   }
 
 }
