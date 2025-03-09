@@ -380,6 +380,11 @@ class Misc {
       this.pa = pa;
 
       pa.body.startAsleep = true;
+      console.log('linear damping default',
+        pa.body.getLinearDamping(),
+        pa.body.getAngularDamping(),
+      );
+      pa.body.setLinearDamping(0);
 
       this.my = {
         mesh: bodyMesh,
@@ -764,7 +769,7 @@ class Misc {
 
       {
         pa.body.getCollisionObservable().add(colliev => {
-          console.log('wall colli event fire!', colliev);
+          //console.log('wall colli event fire!', colliev);
         });
         pa.body.setCollisionCallbackEnabled(true);
       }
