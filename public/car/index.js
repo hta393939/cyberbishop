@@ -100,6 +100,11 @@ class Misc {
   static STORAGE_SLOW = 'slow';
   static STORAGE_FAST = 'fast';
 
+  static BIT_GROUND = 1;
+  static BIT_BODY = 2;
+  static BIT_TIRE = 4;
+  static BIT_WALL = 8;
+
   constructor() {
     this.baby = null;
 
@@ -335,12 +340,40 @@ class Misc {
     const obj = { width: 1.7, height: 1.5, depth: 4.7 };
     console.log('makeCar', obj);
 
+    const tireRadius = 0.3;
     { // body
+      const radius = tireRadius;
+      const h1 = obj.height - (obj.height - radius) / 2;
+      const d2 = obj.depth / 2;
+      const d1 = d2 / 2;
+      const dback = obj.depth * 0.5 * 0.75;
+      const shape = [
+        [-d2, radius, 0], // 左下
+        [ d2, radius, 0], // 右下
+        [ d2, h1, 0], // 右中
+        [ d1, h1, 0],
+        [ d1, obj.height, 0], // 中右上
+        [-dback, obj.height, 0], // 中左上
+        [-d2, h1, 0], // 中左中
+        [-d2, h1, 0], // 左中
+      ];
+
+      /*
       const bodyMesh = BABYLON.MeshBuilder.CreateBox('my',
         obj,
+        scene);*/
+      const bodyMesh = BABYLON.MeshBuilder.ExtrudeShape('my',
+        {
+          shape: shape.map(v => new BABYLON.Vector3(...v)),
+          closeShape: true,
+          cap: BABYLON.Mesh.CAP_ALL,
+          path: [
+            [ obj.width * 0.5, 0, 0],
+            [-obj.width * 0.5, 0, 0],
+          ].map(v => new BABYLON.Vector3(...v)),
+        },
         scene);
       console.log('bodyMesh', bodyMesh.name, bodyMesh);
-      bodyMesh.position.y = obj.height / 2;
 
       const param = {
         mass: 1,
@@ -354,45 +387,65 @@ class Misc {
 
       pa.body.startAsleep = true;
 
+      pa.shape.filterMembershipMask = Misc.BIT_BODY;
+      pa.shape.filterCollideMask = Misc.BIT_GROUND;
+
       this.my = {
         mesh: bodyMesh,
         pa,
       };
     }
 
-    return;
+    //return;
 
-    const tireTickHalf = 0.1;
+    const tireMtl = new BABYLON.StandardMaterial();
+    tireMtl.diffuseColor = new BABYLON.Color3(0.-4, 0.-4, 0.04);
+
+    /** タイヤ幅の半分 */
+    const tireThickHalf = 0.1;
     for (let i = 0; i < 4; ++i) { // tire
       const param = {
         x: (i & 1) * 2 - 1,
-        y: 0,
+        y: tireRadius,
         z: Math.floor(i / 2) * 2 - 1,
       };
       const pts = [];
       const div = 16;
+      const radius = tireRadius;
       for (let j = 0; j < div; ++j) {
         const ang = j * Math.PI * 2 / div;
-        pts.push(new BABYLON.Vector3(Math.cos(ang), Math.sin(ang), 0));
+        pts.push(new BABYLON.Vector3(radius * Math.cos(ang), radius * Math.sin(ang), 0));
       }
-      const width = tireTickHalf * 2;
+
       const paths = [
-        [width / 2, 0, 0],
-        [-width / 2, 0, 0],
+        [ tireThickHalf, 0, 0],
+        [-tireThickHalf, 0, 0],
       ];
-      const m = BABYLON.MeshBuilder.ExtrudeShapeCustom(`tire${i}`,
+
+// @see https://doc.babylonjs.com/typedoc/classes/BABYLON.AbstractMesh
+// threejs と違って Geometry 定常回転は無いのか。
+// @see https://doc.babylonjs.com/typedoc/classes/BABYLON.Geometry
+
+      const m = BABYLON.MeshBuilder.ExtrudeShape(`tire${i}`,
         {
-          shape: pts.map(v => new BABYLON.Vector3(v)),
+          shape: pts,
           closeShape: true,
-          path: paths.map(v => new BABYLON.Vector3(v)),
+          cap: BABYLON.Mesh.CAP_ALL,
+          path: paths.map(v => new BABYLON.Vector3(...v)),
         },
         scene);
+      // 位置を指定
+      //param.x *= 2;
       m.position = new BABYLON.Vector3(param.x, param.y, param.z);
+      m.material = tireMtl;
+
       const pa = new BABYLON.PhysicsAggregate(
         m,
         BABYLON.PhysicsShapeType.CONVEX_HULL,
-        {mass: 2, friction: 1,},
+        { mass: 2, friction: 1 },
         scene);
+      pa.shape.filterMembershipMask = Misc.BIT_TIRE;
+      pa.shape.filterCollideMask = Misc.BIT_GROUND;
 
       const xAxis = new BABYLON.Vector3(1, 0, 0);
       const hinge = new BABYLON.HingeConstraint(
@@ -678,11 +731,15 @@ class Misc {
     const linear = body.getLinearVelocity();
     const ang = body.getAngularVelocity();
     // 制限する
-    const len = Math.min(2, linear.length());
+    const linearLimit = 2;
+    linear.y = 0;
+    const len = Math.min(linearLimit, linear.length());
     linear.normalize().scale(len);
 
     // 回転の制限はどうしよう
     // クォータニオンに変換してから制限か??
+    ang.x = 0;
+    ang.z = 0;
     let angLimit = Math.PI * 2;
     ang.x = Misc.limitAbs(ang.x, angLimit);
     ang.y = Misc.limitAbs(ang.y, angLimit);
