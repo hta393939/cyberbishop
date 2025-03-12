@@ -139,6 +139,7 @@ class Misc {
     param.canvas = document.getElementById('maincanvas');
     await this.firstInit(param);
 
+    /*
     await new Promise((resolve, reject) => {
       effekseer.initRuntime('./effekseer.wasm', () => {
         resolve();
@@ -147,7 +148,7 @@ class Misc {
     {
       const context = effekseer.createContext();
       this.initEffek(context);
-    }
+    } */
 
     const _onResize = () => {
       return;
@@ -170,17 +171,20 @@ class Misc {
       _onResize();
     }
 
+    /*
     { // 物理衝突検討
       const colli = new PhyColli();
       this.phycolli = colli;
       //colli.init(this.scene);
     }
+      */
 
     await this.secondInit(this.scene);
 
+    /*
     {
       this.phycolli.init(this.scene);
-    }
+    } */
   }
 
   saveSetting() {
@@ -209,14 +213,28 @@ class Misc {
  * canvas を描画する必要最低限
  * @param {*} param 
  */
-  firstInit(param) {
+  async firstInit(param) {
     console.log('firstInit', param);
+    globalThis.canvas = param.canvas;
+
+    /*
+    const havokInstance = await HavokPhysics({
+      locationFile: () => '../third_party/snapshot.7.52.2/havok/HavokPhysics.wasm'
+    });
+    console.log('havokInstance', havokInstance);
+    globalThis.havokInstance = havokInstance;
+    */
 
     const engine = new BABYLON.Engine(param.canvas);
     const scene = new BABYLON.Scene(engine);
-    this.scene = scene;
-    scene.useRightHandedSystem = true;
+    globalThis.engine = engine;
+    globalThis.scene = scene;
 
+    this.scene = scene;
+    this.engine = engine;
+    //scene.useRightHandedSystem = true;
+
+    /*
     const camera = new BABYLON.ArcRotateCamera('camera1',
       0, 0, 2,
       new BABYLON.Vector3(0, 0, 0),
@@ -227,7 +245,7 @@ class Misc {
     camera.wheelDeltaPrecentage = 0.01;
     if (!this.isThirdCamera) {
       camera.attachControl();
-    }
+    }*/
 
     if (false) {
       const light = new BABYLON.PointLight('light1',
@@ -246,7 +264,7 @@ class Misc {
         scene);
     }
 
-    {
+    { /*
       const ui = new UIClass();
       this.ui = ui;
       ui.addEventListener(UIClass.EVENT_CLICK, ev => {
@@ -256,12 +274,13 @@ class Misc {
         console.log('action fire', ev);
       });
       ui.init(scene);
-    }
+    */ }
 
+    /*
     engine.runRenderLoop(() => {
       this.update();
       scene.render();
-    });
+    }); */
   }
 
   /**
@@ -295,8 +314,6 @@ class Misc {
       }
     }
 
-    this.applyCarForce();
-
     if (this.isThirdCamera) {
       this.updateThirdCamera();
     }
@@ -317,149 +334,22 @@ class Misc {
 
   async secondInit(scene) {
     console.log('secondInit');
+
     const havokInstance = await HavokPhysics({
-      locationFile: () => './HavokPhysics.wasm'
+      locationFile: () => '../third_party/snapshot.7.52.2/havok/HavokPhysics.wasm'
+      //locationFile: () => './HavokPhysics.wasm'
     });
     const havokPlugin = new BABYLON.HavokPlugin(true, havokInstance);
-    scene.enablePhysics(new BABYLON.Vector3(0, -9.8 / 60, 0),
+    scene.enablePhysics(new BABYLON.Vector3(0, -240, 0),
       havokPlugin);
 
-    this.makeCar(scene);
-    this.makeMap(scene);
+    const retscene = await createScene();
+
+    //this.makeMap(scene);
     //this.makeAreas(scene);
     //this.makeWall(scene);
 
-    this.readyInput(scene);
-  }
-
-  /**
-   * 車1つ作る
-   * @param {*} scene 
-   */
-  makeCar(scene) {
-    const obj = { width: 1.7, height: 1.5, depth: 4.7 };
-    console.log('makeCar', obj);
-
-    const tireRadius = 0.3;
-    { // body
-      const radius = tireRadius;
-      const h1 = obj.height - (obj.height - radius) / 2;
-
-      const d2 = obj.depth / 2;
-      const dfbase = d2 * 0.75;
-      const d1 = d2 / 2;
-      const dback = obj.depth * 0.5 * 0.75;
-      const shape = [
-        [-d2, radius, 0], // 左下
-        [ d2, radius, 0], // 右下
-        [ d2, h1, 0], // 右中
-        [ d1 * 0 + dfbase, h1, 0],
-        [ d1, obj.height, 0], // 中右上
-        [-dback, obj.height, 0], // 中左上
-        [-d2, h1, 0], // 中左中
-        [-d2, h1, 0], // 左中
-      ];
-
-      /*
-      const bodyMesh = BABYLON.MeshBuilder.CreateBox('my',
-        obj,
-        scene);*/
-      const bodyMesh = BABYLON.MeshBuilder.ExtrudeShape('my',
-        {
-          shape: shape.map(v => new BABYLON.Vector3(...v)),
-          closeShape: true,
-          cap: BABYLON.Mesh.CAP_ALL,
-          path: [
-            [ obj.width * 0.5, 0, 0],
-            [-obj.width * 0.5, 0, 0],
-          ].map(v => new BABYLON.Vector3(...v)),
-        },
-        scene);
-      console.log('bodyMesh', bodyMesh.name, bodyMesh);
-
-      const param = {
-        mass: 1,
-        friction: 1,
-        restitution: 0,
-      };
-      const pa = new BABYLON.PhysicsAggregate(bodyMesh,
-        BABYLON.PhysicsShapeType.CONVEX_HULL,
-        param);
-      this.pa = pa;
-
-      pa.body.startAsleep = true;
-      pa.body.setLinearDamping(0);
-
-      pa.shape.filterMembershipMask = Misc.BIT_BODY;
-      pa.shape.filterCollideMask = Misc.BIT_GROUND;
-
-      this.my = {
-        mesh: bodyMesh,
-        pa,
-      };
-    }
-
-    //return;
-
-    const tireMtl = new BABYLON.StandardMaterial();
-    tireMtl.diffuseColor = new BABYLON.Color3(0.-4, 0.-4, 0.04);
-
-    /** タイヤ幅の半分 */
-    const tireThickHalf = 0.1;
-    for (let i = 0; i < 4; ++i) { // tire
-      const param = {
-        x: (i & 1) * 2 - 1,
-        y: tireRadius,
-        z: Math.floor(i / 2) * 2 - 1,
-      };
-      const pts = [];
-      const div = 16;
-      const radius = tireRadius;
-      for (let j = 0; j < div; ++j) {
-        const ang = j * Math.PI * 2 / div;
-        pts.push(new BABYLON.Vector3(radius * Math.cos(ang), radius * Math.sin(ang), 0));
-      }
-
-      const paths = [
-        [ tireThickHalf, 0, 0],
-        [-tireThickHalf, 0, 0],
-      ];
-
-// @see https://doc.babylonjs.com/typedoc/classes/BABYLON.AbstractMesh
-// threejs と違って Geometry 定常回転は無いのか。
-// @see https://doc.babylonjs.com/typedoc/classes/BABYLON.Geometry
-
-      const m = BABYLON.MeshBuilder.ExtrudeShape(`tire${i}`,
-        {
-          shape: pts,
-          closeShape: true,
-          cap: BABYLON.Mesh.CAP_ALL,
-          path: paths.map(v => new BABYLON.Vector3(...v)),
-        },
-        scene);
-      m.position = new BABYLON.Vector3(param.x, param.y, param.z);
-      m.material = tireMtl;
-
-      const pa = new BABYLON.PhysicsAggregate(
-        m,
-        BABYLON.PhysicsShapeType.CONVEX_HULL,
-        { mass: 2, friction: 1 },
-        scene);
-      pa.shape.filterMembershipMask = Misc.BIT_TIRE;
-      pa.shape.filterCollideMask = Misc.BIT_GROUND;
-
-      pa.body.setLinearDamping(0);
-
-      const xAxis = new BABYLON.Vector3(1, 0, 0);
-      const hinge = new BABYLON.HingeConstraint(
-        BABYLON.Vector3.Zero(), m.position,
-        xAxis, xAxis,
-        scene,
-      );
-      console.log('m', m, 'pa', pa, 'hinge', hinge);
-      pa.body.addConstraint(this.pa.body, hinge);
-    }
-
+    //this.readyInput(scene);
   }
 
   /** 1枚の地面を作成する */
@@ -627,109 +517,6 @@ class Misc {
         });
         pa.body.setCollisionCallbackEnabled(true);
       }
-    }
-  }
-
-  /**
-   * 力加えて移動
-   * @param {*} param 
-   * @returns 
-   */
-  applyCarForce(param) {
-    const m = this.my?.mesh;
-    if (!m) {
-      return;
-    }
-    const body = this.my?.pa?.body;
-    if (!body) {
-      return;
-    }
-
-    if (!param) {
-      //return;
-    }
-
-    /** タイヤの間隔の半分 */
-    const bodyLenHalf = 1;
-    /** 車体に対するタイヤの角度。0度は正面 */
-    const tireAng = this.tireDeg * Math.PI / 180;
-    /** 進行方向(グローバル) */
-    const gvDir = new BABYLON.Vector3(0, 0, 1).normalize();
-
-    // 姿勢を得る
-    const q = m.absoluteRotationQuaternion;
-    const center = m.absolutePosition.clone();
-
-    const fs = [];
-    {
-      // トラクション タイヤの向き??
-      const traScale = 2;
-      const tra = {
-        offset: new BABYLON.Vector3(0, 0, 0),
-        power: new BABYLON.Vector3(
-          0,
-          0,
-          1,
-        ).scale(traScale),
-        relative: true,
-      };
-      fs.push(tra);
-      // ブレーキ ??
-      const brake = {
-        offset: new BABYLON.Vector3(0, 0, 0),
-        power: new BABYLON.Vector3(
-          0,
-          0,
-          0,
-        ),
-        relative: true,
-      };
-      fs.push(brake);
-      // 空気抵抗 進行方向では??
-      const aero = {
-        offset: new BABYLON.Vector3(0, 0, 0),
-        power: new BABYLON.Vector3(
-          0,
-          0,
-          -1,
-        ),
-        relative: true,
-      };
-      fs.push(aero);
-      // 転がり摩擦 ↓
-      
-      // 遠心力
-      const centriScale = bodyLenHalf * 2 * Math.sin(tireAng);
-      const centri = {
-        offset: new BABYLON.Vector3(0, 0, 0),
-        power: new BABYLON.Vector3(
-          1,
-          0,
-          0,
-        ).scale(centriScale),
-        relative: true,
-      };
-      fs.push(centri);
-      // コーナリングフォース
-      const cornerScale = 1;
-      const corner = {
-        offset: new BABYLON.Vector3(0, 0, 0),
-        power: new BABYLON.Vector3(
-          -1,
-          0,
-          0,
-        ).scale(cornerScale),
-        relative: true,
-      };
-      fs.push(corner);
-    }
-
-    for (const f of fs) { // 入力を姿勢で変換する
-      const force = f.relative ?
-        f.power.applyRotationQuaternion(q)
-        : f.power.clone();
-      const pos = center.add(f.offset.applyRotationQuaternion(q));
-      body.applyForce(force, pos);
     }
   }
 
