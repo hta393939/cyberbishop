@@ -1,0 +1,22 @@
+@charset "UTF-8";
+
+:root {
+  --width: 960px;
+  --height: 540px;
+}
+
+
+body {
+  position: relative;
+  margin: 0;
+  border: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+#maincanvas {
+  border: none;
+  width: var(--width);
+  height: var(--height);
+}
+
