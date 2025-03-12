@@ -76,8 +76,8 @@ function CreateCar() {
     for (const v of [
         { mesh: flWheel, fric: 50 }, // テンプレートでは 50
         { mesh: frWheel, fric: 50 },
-        { mesh: rlWheel, fric: 50 }, // 後輪の摩擦を減らしてみる
-        { mesh: rrWheel, fric: 50 },
+        { mesh: rlWheel, fric: 2 }, // 後輪の摩擦を減らしてみる
+        { mesh: rrWheel, fric: 2 },
     ]) {
         AddWheelPhysics(v.mesh, 100, 0.1, v.fric);
         FilterMeshCollisions(v.mesh);
@@ -330,6 +330,8 @@ function CreateGroundAndWalls() {
     ground.material = groundMaterial;
     ground.position = new BABYLON.Vector3(0, -10, 0);
     AddStaticPhysics(ground, 300);
+
+    return;
 
     const wallA = BABYLON.MeshBuilder.CreateBox("Wall", { height: 20, width: 500, depth: 1 });
     wallA.position = new BABYLON.Vector3(0, 0, 250);

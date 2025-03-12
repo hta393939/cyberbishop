@@ -1,49 +1,4 @@
-/**
- * @file index.js
- */
-
-import { UIClass } from "./ui.js";
-
-class IPhysicsCollisionEvent {
-  constructor() {
-    this.collidedAgainst;
-    this.collider;
-    this.distance = 0;
-    this.impulse = 0;
-    this.normal;
-    this.point;
-    /**
-     * @type {PhysicsEventType}
-     * COLLISION_* or TRIGGER_*
-     */
-    this.type;
-  }
-}
-
-class MeshColli {
-  constructor() {
-    this.meshes = [];
-    this.meshes2 = [];
-  }
-
-  init(scene) {
-    // 
-    // 
-    // 
-  }
-
-  check() {
-    for (const m of this.meshes) {
-      for (const m2 of this.meshes2) {
-        /**
-         * @type {boolean}
-         */
-        const result = m.intersectsMesh(m2);
-      }
-    }
-  }
-
-}
+//import { UIClass } from "./ui.js";
 
 class PhyColli {
   constructor() {
@@ -171,20 +126,16 @@ class Misc {
       _onResize();
     }
 
-    /*
     { // 物理衝突検討
       const colli = new PhyColli();
       this.phycolli = colli;
-      //colli.init(this.scene);
     }
-      */
 
     await this.secondInit(this.scene);
 
-    /*
     {
       this.phycolli.init(this.scene);
-    } */
+    }
   }
 
   saveSetting() {
@@ -209,22 +160,13 @@ class Misc {
     console.log('initEffek', context);
   }
 
-/**
- * canvas を描画する必要最低限
- * @param {*} param 
- */
+  /**
+   * canvas を描画する必要最低限
+   * @param {*} param 
+   */
   async firstInit(param) {
     console.log('firstInit', param);
     globalThis.canvas = param.canvas;
-
-    /*
-    const havokInstance = await HavokPhysics({
-      locationFile: () => '../third_party/snapshot.7.52.2/havok/HavokPhysics.wasm'
-    });
-    console.log('havokInstance', havokInstance);
-    globalThis.havokInstance = havokInstance;
-    */
-
     const engine = new BABYLON.Engine(param.canvas);
     const scene = new BABYLON.Scene(engine);
     globalThis.engine = engine;
@@ -233,19 +175,6 @@ class Misc {
     this.scene = scene;
     this.engine = engine;
     //scene.useRightHandedSystem = true;
-
-    /*
-    const camera = new BABYLON.ArcRotateCamera('camera1',
-      0, 0, 2,
-      new BABYLON.Vector3(0, 0, 0),
-      scene);
-    this.camera = camera;
-    camera.fov = Math.PI * 60 / 180;
-    camera.setPosition(new BABYLON.Vector3(2, 5, 20));
-    camera.wheelDeltaPrecentage = 0.01;
-    if (!this.isThirdCamera) {
-      camera.attachControl();
-    }*/
 
     if (false) {
       const light = new BABYLON.PointLight('light1',
@@ -275,15 +204,10 @@ class Misc {
       });
       ui.init(scene);
     */ }
-
-    /*
-    engine.runRenderLoop(() => {
-      this.update();
-      scene.render();
-    }); */
   }
 
   /**
+   * 不使用
    * 高頻度に更新する
    */
   update() {
@@ -332,6 +256,10 @@ class Misc {
     }
   }
 
+  /**
+   * 物理演算含む第二次初期化
+   * @param {*} scene 
+   */
   async secondInit(scene) {
     console.log('secondInit');
 
@@ -345,8 +273,13 @@ class Misc {
 
     const retscene = await createScene();
 
+    { // 地面用テクスチャを生成する
+      const tex = new BABYLON.Texture('./ground1.png', scene);
+      this.groundtex = tex;
+    }
+
     //this.makeMap(scene);
-    //this.makeAreas(scene);
+    this.makeAreas(scene);
     //this.makeWall(scene);
 
     //this.readyInput(scene);
@@ -356,10 +289,7 @@ class Misc {
   makeMap(scene) {
     console.log('makeMap');
 
-    { // 地面用テクスチャを生成する
-      const tex = new BABYLON.Texture('./ground1.png', scene);
-      this.groundtex = tex;
-    }
+
     const tex = new BABYLON.DynamicTexture('tex1',
       { width: 1024, height: 1024 }, scene);
     Misc.writeCanvas(tex.getContext());
@@ -383,10 +313,13 @@ class Misc {
 
   /**
    * 
+   * @param {Object} param
+   * @param {[number,number,number]} param.center 中心座標
    * @param {BABYLON.Scene} scene 
-   * @param {bolean} cross 
+   * @param {boolean} cross 
    */
   makeOneArea(param, scene, cross) {
+    console.log('makeOneArea', param);
     const vd = BABYLON.CreateBoxVertexData({
       width: 2, height: 2, depth: 2,
     });
@@ -426,7 +359,8 @@ class Misc {
 
     //console.log('numVertex', numVertex, vd.positions.length, vd.positions);
 
-    const m = new BABYLON.Mesh(`a${Math.random()}`,
+    const m = new BABYLON.Mesh(
+      `a${Math.random()}`,
       scene);
     vd.applyToMesh(m, false);
 
@@ -439,12 +373,15 @@ class Misc {
     const pa = new BABYLON.PhysicsAggregate(
       m,
       BABYLON.PhysicsShapeType.CONVEX_HULL,
-      { mass: 0, restitution: 0 },
+      { mass: 0, restitution: 0,
+        friction: 1,
+      },
     );
 
     { // TODO: 物理
       this.phycolli?.setToFloor(pa);
     }
+    console.log('makeOneArea end', m);
   }
 
   makeAreas(scene) {
@@ -454,16 +391,16 @@ class Misc {
       true, true, true, true,
       true, true, true, true,
     ];
-    const half = 20;
+    const half = 200;
     const wnum = 4;
     const hnum = 4;
     for (let i = 0; i < wnum * hnum; ++i) {
       const param = {
-        //adds: [0.4, 0.1, 0.2, 0.3],
-        adds: [0, 0, 0, 0],
+        adds: [0.4, 0.1, 0.2, 0.3],
+        //adds: [0, 0, 0, 0],
         center: [
           ((i & 3) * 2 - wnum + 1) * half,
-          -5,
+          -2,
           (Math.floor(i / 4) * 2 - hnum + 1) * half,
         ],
         scale: [
@@ -472,9 +409,11 @@ class Misc {
           half,
         ],
       };
-      this.makeOneArea(param,
+      this.makeOneArea(
+        param,
         scene, cross[i]);
     }
+    console.log('makeAreas');
   }
 
   /**
