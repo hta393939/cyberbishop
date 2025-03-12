@@ -139,6 +139,7 @@ class Misc {
     param.canvas = document.getElementById('maincanvas');
     await this.firstInit(param);
 
+    /*
     await new Promise((resolve, reject) => {
       effekseer.initRuntime('./effekseer.wasm', () => {
         resolve();
@@ -147,7 +148,7 @@ class Misc {
     {
       const context = effekseer.createContext();
       this.initEffek(context);
-    }
+    } */
 
     const _onResize = () => {
       return;
@@ -170,17 +171,20 @@ class Misc {
       _onResize();
     }
 
+    /*
     { // 物理衝突検討
       const colli = new PhyColli();
       this.phycolli = colli;
       //colli.init(this.scene);
     }
+      */
 
     await this.secondInit(this.scene);
 
+    /*
     {
       this.phycolli.init(this.scene);
-    }
+    } */
   }
 
   saveSetting() {
@@ -213,15 +217,12 @@ class Misc {
     console.log('firstInit', param);
     globalThis.canvas = param.canvas;
 
+    /*
     const havokInstance = await HavokPhysics({
       locationFile: () => '../third_party/snapshot.7.52.2/havok/HavokPhysics.wasm'
     });
     console.log('havokInstance', havokInstance);
     globalThis.havokInstance = havokInstance;
-    /*
-    globalThis.HK = HavokPhysics({
-      locationFile: () => './HavokPhysics.wasm'
-    });
     */
 
     const engine = new BABYLON.Engine(param.canvas);
@@ -229,11 +230,11 @@ class Misc {
     globalThis.engine = engine;
     globalThis.scene = scene;
 
-
     this.scene = scene;
-    this.engine = scene.engine;
-    scene.useRightHandedSystem = true;
+    this.engine = engine;
+    //scene.useRightHandedSystem = true;
 
+    /*
     const camera = new BABYLON.ArcRotateCamera('camera1',
       0, 0, 2,
       new BABYLON.Vector3(0, 0, 0),
@@ -244,7 +245,7 @@ class Misc {
     camera.wheelDeltaPrecentage = 0.01;
     if (!this.isThirdCamera) {
       camera.attachControl();
-    }
+    }*/
 
     if (false) {
       const light = new BABYLON.PointLight('light1',
@@ -263,7 +264,7 @@ class Misc {
         scene);
     }
 
-    {
+    { /*
       const ui = new UIClass();
       this.ui = ui;
       ui.addEventListener(UIClass.EVENT_CLICK, ev => {
@@ -273,12 +274,13 @@ class Misc {
         console.log('action fire', ev);
       });
       ui.init(scene);
-    }
+    */ }
 
+    /*
     engine.runRenderLoop(() => {
       this.update();
       scene.render();
-    });
+    }); */
   }
 
   /**
@@ -334,21 +336,23 @@ class Misc {
 
   async secondInit(scene) {
     console.log('secondInit');
+
     const havokInstance = await HavokPhysics({
-      locationFile: () => './HavokPhysics.wasm'
+      locationFile: () => '../third_party/snapshot.7.52.2/havok/HavokPhysics.wasm'
+      //locationFile: () => './HavokPhysics.wasm'
     });
     const havokPlugin = new BABYLON.HavokPlugin(true, havokInstance);
-    scene.enablePhysics(new BABYLON.Vector3(0, -9.8 / 60, 0),
+    scene.enablePhysics(new BABYLON.Vector3(0, -240, 0),
       havokPlugin);
 
     const retscene = await createScene();
 
-    this.makeCar(scene);
-    this.makeMap(scene);
+    //this.makeCar(scene);
+    //this.makeMap(scene);
     //this.makeAreas(scene);
     //this.makeWall(scene);
 
-    this.readyInput(scene);
+    //this.readyInput(scene);
   }
 
   /**

@@ -17,14 +17,14 @@ async function createScene() {
     scene.enablePhysics(new BABYLON.Vector3(0, -240, 0), havokInstance);
 
     // NOTE: なにこれ;;
-    //scene.getPhysicsEngine().setTimeStep(1 / 500);
+    scene.getPhysicsEngine().setTimeStep(1 / 500);
 
     //
     // NOTE: To change the speed of the simulation without distoring the physics too much, leave the setTimeStep and 
     // update the setSubTimeStep (only the case when HavokPlugin() _useDeltaForWorldStep is set to false)
     //
     // NOTE: なにこれ;;
-    //scene.getPhysicsEngine().setSubTimeStep(4.5);
+    scene.getPhysicsEngine().setSubTimeStep(4.5);
 
     const camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 10, -10), scene);
     camera.radius = 50;
