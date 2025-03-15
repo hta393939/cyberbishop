@@ -9,6 +9,55 @@ debugColours[4] = new BABYLON.Color3(0, 1, 1);
 debugColours[5] = new BABYLON.Color3(0, 0, 1);
 const FILTERS = { CarParts: 1, Environment: 2 }
 
+const _getDrive = () => {
+  const pads = navigator.getGamepads();
+  const obj = { angle: 0, accel: 0, brake: 0 };
+  for (const pad of pads) {
+    if (!pad) {
+      continue;
+    }
+
+    const accel = pad.buttons[5].pressed;
+    const brake = pad.buttons[4].pressed;
+    obj.accel |= accel ? 1 : 0;
+    obj.brake |= brake ? 1 : 0;
+
+    const dead = 0.25;
+    const over = 0.75;
+    const rate = 5;
+    let angle = 0;
+    let x = pad.axes[0];
+    let y = pad.axes[1];
+    /** 縦 */
+    let z = pad.axes[2];
+    /** 横 */
+    let rz = pad.axes[5];
+    {
+      document.body.dataset['gamepad'] = JSON.stringify(pad.axes.map(v => v.toFixed(4)));
+    }
+    let ax = Math.abs(x);
+    let ay = Math.abs(y);
+    let az = Math.abs(z);
+    let arz = Math.abs(rz);
+    if (ay < dead) {
+      ay = 0;
+    }
+    if (az < dead) {
+      az = 0;
+    }
+    angle = y - z;
+    if (ay > over) {
+      angle += ax;
+    }
+    if (az > over) {
+      angle += -arz;
+    }
+    angle = angle * rate;
+    obj.angle += angle;
+  }
+  return obj;
+};
+
 async function createScene() {
     // 外から渡す
     const havokInstance = globalThis.havokInstance;
@@ -279,7 +328,10 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
     });
 
     // 毎フレームの描画前処理
-    scene.onBeforeRenderObservable.add(() => {
+  const _processInput = () => {
+    const drive = _getDrive();
+
+    if (false) {
         if (leftPressed && currentSteeringAngle < maxSteeringAngle) {
             currentSteeringAngle += 0.01;
         } else if (rightPressed && currentSteeringAngle > -maxSteeringAngle) {
@@ -288,8 +340,14 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
             // 左右どちらにも切っていなかったら減衰させる
             currentSteeringAngle *= 0.98;
         }
+    } else {
+      currentSteeringAngle = drive.angle;
+      brakePressed = drive.brake;
+      forwardPressed = drive.accel;
+    }
 
         const [innerAngle, outerAngle] = CalculateWheelAngles(currentSteeringAngle);
+
         steerWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, outerAngle);
         steerWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, innerAngle);
 
@@ -305,7 +363,8 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
 
         motorWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
         motorWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
-    });
+  };
+  scene.onBeforeRenderObservable.add(_processInput);
 }
 
 function InitTyreMaterial() {
