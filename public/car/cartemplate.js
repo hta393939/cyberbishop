@@ -24,7 +24,7 @@ const _getDrive = () => {
 
     const dead = 0.25;
     const over = 0.75;
-    const rate = 5;
+    const rate = 16;
     let angle = 0;
     let x = pad.axes[0];
     let y = pad.axes[1];
@@ -73,7 +73,9 @@ async function createScene() {
     //
     scene.getPhysicsEngine().setSubTimeStep(4.5);
 
-    const camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 10, -10), scene);
+  const camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 10, -10), scene);
+  camera.minZ = 2;
+  camera.maxZ = 2400;
     camera.radius = 50;
     camera.heightOffset = 20;
     camera.rotationOffset = 180;
@@ -99,9 +101,17 @@ async function createScene() {
 /** 1台の車を作成する */
 function CreateCar() {
     const carFrame = BABYLON.MeshBuilder.CreateBox("Frame", { height: 1, width: 12, depth: 24, faceColors: debugColours });
+  {
+    globalThis._carFrame = carFrame;
+    globalThis._prePosition = null;
+  }
+
     carFrame.position = new BABYLON.Vector3(0, 0.3, 0);
     carFrame.visibility = 0.5;
-    const carFrameBody = AddDynamicPhysics(carFrame, 1000, 0, 0);
+    /** デフォルトは 1000 */
+    //const carFrameMass = 1000;
+    const carFrameMass = 200;
+    const carFrameBody = AddDynamicPhysics(carFrame, carFrameMass, 0, 0);
     FilterMeshCollisions(carFrame);
 
     /** 前左 */
@@ -125,8 +135,8 @@ function CreateCar() {
     for (const v of [
         { mesh: flWheel, fric: 50 }, // テンプレートでは 50
         { mesh: frWheel, fric: 50 },
-        { mesh: rlWheel, fric: 2 }, // 後輪の摩擦を減らしてみる
-        { mesh: rrWheel, fric: 2 },
+        { mesh: rlWheel, fric: 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
+        { mesh: rrWheel, fric: 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
     ]) {
         AddWheelPhysics(v.mesh, 100, 0.1, v.fric);
         FilterMeshCollisions(v.mesh);
@@ -307,7 +317,9 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
 
     let currentSpeed = 0;
     let currentSteeringAngle = 0;
-    let maxSpeed = 150;
+    /** デフォルトは 150 */
+    //let maxSpeed = 150;
+    let maxSpeed = 200;
     /** デフォルトは 30 度 */
     const maxSteeringAngle = Math.PI / 6;
 
@@ -327,9 +339,29 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
         }
     });
 
-    // 毎フレームの描画前処理
+  // 毎フレームの描画前処理
   const _processInput = () => {
     const drive = _getDrive();
+    {
+      const ts = Date.now();
+      globalThis.angle = drive.angle;
+      document.body.dataset['angle'] = `${globalThis.angle.toFixed(2)}`;
+      const carFrame = globalThis._carFrame;
+      if (globalThis._prePosition) {
+        const diffts = ts - globalThis._prets;
+        const prePosition = globalThis._prePosition;
+        const position = carFrame.position.clone();
+        const diff = position.subtract(prePosition);
+        const speed = diff.length() * 1000 / diffts;
+        document.body.dataset['speed'] = `${speed.toFixed(2)}`;
+        globalThis._speed = speed;
+        globalThis._prets = ts;
+        globalThis._prePosition = position;
+      } else {
+        globalThis._prets = ts;
+        globalThis._prePosition = carFrame.position.clone();
+      }
+    }
 
     if (false) {
         if (leftPressed && currentSteeringAngle < maxSteeringAngle) {
@@ -341,7 +373,7 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
             currentSteeringAngle *= 0.98;
         }
     } else {
-      currentSteeringAngle = drive.angle;
+      currentSteeringAngle = drive.angle * Math.PI / 180;
       brakePressed = drive.brake;
       forwardPressed = drive.accel;
     }

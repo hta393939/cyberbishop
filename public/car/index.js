@@ -1,4 +1,4 @@
-//import { UIClass } from "./ui.js";
+import { UIClass } from "./ui.js";
 
 class PhyColli {
   constructor() {
@@ -193,7 +193,7 @@ class Misc {
         scene);
     }
 
-    { /*
+    {
       const ui = new UIClass();
       this.ui = ui;
       ui.addEventListener(UIClass.EVENT_CLICK, ev => {
@@ -203,7 +203,9 @@ class Misc {
         console.log('action fire', ev);
       });
       ui.init(scene);
-    */ }
+    }
+
+    this.update();
   }
 
   /**
@@ -211,6 +213,10 @@ class Misc {
    * 高頻度に更新する
    */
   update() {
+    requestAnimationFrame(() => {
+      this.update();
+    });
+
     const delta = this.scene.getEngine().getDeltaTime();
 
     {
@@ -225,35 +231,11 @@ class Misc {
         const tb = this.ui?.tbFPS;
         if (tb) {
           tb.text = `${fps.toFixed(1)} [fps]`;
+          tb.text += `\n${globalThis._speed?.toFixed?.(1)} sp`;
         }
       }
     }
 
-    if (this.padManager) {
-      for (const pad of this.padManager.gamepads) {
-        if (!pad || !pad.isConnected) {
-          continue;
-        }
-        this.updateByPad(pad);
-      }
-    }
-
-    if (this.isThirdCamera) {
-      this.updateThirdCamera();
-    }
-
-    if (!this.joys[1]) {
-      return;
-    }
-
-    {
-      const ljx = this.joys[0].deltaPosition.x;
-      const rjx = this.joys[1].deltaPosition.y;
-      let x = ljx * 10;
-      let y = rjx * 10;
-      let z = 20;
-      this.camera.setPosition(new BABYLON.Vector3(x, y, z));
-    }
   }
 
   /**
@@ -281,6 +263,8 @@ class Misc {
     //this.makeMap(scene);
     this.makeAreas(scene);
     //this.makeWall(scene);
+
+    this.makeTower(scene);
 
     //this.readyInput(scene);
   }
@@ -385,23 +369,18 @@ class Misc {
   }
 
   makeAreas(scene) {
-    const cross = [
-      true, true, true, true,
-      true, true, true, true,
-      true, true, true, true,
-      true, true, true, true,
-    ];
-    const half = 200;
-    const wnum = 4;
-    const hnum = 4;
-    for (let i = 0; i < wnum * hnum; ++i) {
+    const half = 200 * 5;
+    const wnum = 20;
+    const hnum = 20;
+    for (let i = 0; i < hnum; ++i) {
+      for (let j = 0; j < wnum; ++j) {
       const param = {
         adds: [0.4, 0.1, 0.2, 0.3],
         //adds: [0, 0, 0, 0],
         center: [
-          ((i & 3) * 2 - wnum + 1) * half,
+          (j * 2 - wnum + 1) * half,
           -2,
-          (Math.floor(i / 4) * 2 - hnum + 1) * half,
+          (i * 2 - hnum + 1) * half,
         ],
         scale: [
           half,
@@ -411,7 +390,10 @@ class Misc {
       };
       this.makeOneArea(
         param,
-        scene, cross[i]);
+        scene,
+        false,
+      );
+      }
     }
     console.log('makeAreas');
   }
@@ -456,6 +438,26 @@ class Misc {
         });
         pa.body.setCollisionCallbackEnabled(true);
       }
+    }
+  }
+
+  makeTower(scene) {
+    const radius = 1600;
+    for (let i = 0; i < 360; i += 2) {
+      const param = {
+        diameterTop: 1 * 5,
+        diameterBottom: 2 * 5,
+        height: 10 * 5,
+      };
+      const m = BABYLON.MeshBuilder.CreateCylinder(
+        `tower${i}`,
+        param,
+        scene,
+      );
+      const ang = i * Math.PI / 180;
+      const cs = Math.cos(ang);
+      const sn = Math.sin(ang);
+      m.position = new BABYLON.Vector3(sn * radius, param.height / 2, cs *radius);
     }
   }
 
@@ -518,30 +520,7 @@ class Misc {
    * @see https://doc.babylonjs.com/typedoc/classes/BABYLON.GenericPad#leftStick
    * @param {BABYLON.GenericPad} pad 
    */
-  updateByPad(pad) {
-    const left = pad.leftStick;
-    const right = pad.rightStick;
-    /** デッドゾーン */
-    const dead = 0.2;
-    const over = 0.8;
-    let aly = Math.abs(left.y);
-    let ary = Math.abs(right.y);
-    aly = (aly < dead) ? 0 : aly;
-    ary = (ary < dead) ? 0 : ary;
-    // 内に回した分を追加する
-    if (aly > over) {
-      aly += Math.max(0, left.x);
-    }
-    if (ary > over) {
-      ary += Math.max(0, -right.x);
-    }
-
-    const tireDeg = (aly * Math.sign(left.y) - ary * Math.sign(right.y)) * 10;
-    this.tireDeg = tireDeg;
-
-    document.body.dataset['tireDeg'] = tireDeg.toFixed(1);
-  }
-
+/*
   readyPadInput(pad) {
     // 変更できる
     pad._rightStickAxisX = 5;
@@ -562,10 +541,11 @@ class Misc {
       }
     });
   }
-
+*/
   /**
    * 入力の反映
    */
+  /*
   readyInput(scene) {
 
     scene.onPointerMove = () => {
@@ -621,6 +601,7 @@ class Misc {
     }
 
   }
+  */
 
   /**
    * 絶対値を制限する
