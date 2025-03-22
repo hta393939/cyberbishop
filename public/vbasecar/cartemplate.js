@@ -126,17 +126,27 @@ function CreateCar() {
     const rrWheel = CreateWheel(new BABYLON.Vector3(-5, 0, -8));
     const rrAxle = CreateAxle(new BABYLON.Vector3(-5, 0, -8));
 
-    for (const mesh of [flAxle, frAxle, rlAxle, rrAxle]) {
+    /** MARK: 中輪 */
+    const mlWheel = CreateWheel(new BABYLON.Vector3(5, 0, 0));
+    const mlAxle = CreateAxle(new BABYLON.Vector3(5, 0, 0));
+    const mrWheel = CreateWheel(new BABYLON.Vector3(-5, 0, 0));
+    const mrAxle = CreateAxle(new BABYLON.Vector3(-5, 0, 0));
+
+    for (const mesh of [flAxle, frAxle, rlAxle, rrAxle,
+        mlAxle, mrAxle,
+    ]) {
         carFrame.addChild(mesh);
         AddAxlePhysics(mesh, 100, 0, 0);
         FilterMeshCollisions(mesh);
     }
 
     for (const v of [
-        { mesh: flWheel, fric: 50 }, // テンプレートでは 50
-        { mesh: frWheel, fric: 50 },
-        { mesh: rlWheel, fric: 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
-        { mesh: rrWheel, fric: 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
+        { mesh: flWheel, fric: 0 }, // テンプレートでは 50
+        { mesh: frWheel, fric: 0 },
+        { mesh: rlWheel, fric: 0 }, // 後輪の摩擦を減らしてみる 0.2 は NG
+        { mesh: rrWheel, fric: 0 }, // 0.6 から面白そう 0.9 はちと足りない
+        { mesh: mlWheel, fric: 50 },
+        { mesh: mrWheel, fric: 50 },
     ]) {
         AddWheelPhysics(v.mesh, 100, 0.1, v.fric);
         FilterMeshCollisions(v.mesh);
@@ -144,15 +154,34 @@ function CreateCar() {
 
     const poweredWheelMotorA = CreatePoweredWheelJoint(flAxle, flWheel);
     const poweredWheelMotorB = CreatePoweredWheelJoint(frAxle, frWheel);
+    /** 中輪 */
+    const poweredWheelMotorML = CreatePoweredWheelJoint(mlAxle, mlWheel);
+    const poweredWheelMotorMR = CreatePoweredWheelJoint(mrAxle, mrWheel);
+
     CreateWheelJoint(rlAxle, rlWheel);
     CreateWheelJoint(rrAxle, rrWheel);
 
-    const steerWheelA = AttachAxleToFrame(flAxle.physicsBody, carFrameBody, true);
-    const steerWheelB = AttachAxleToFrame(frAxle.physicsBody, carFrameBody, true);
+    let steerWheelA;
+    let steerWheelB;
+    if (false) {
+        steerWheelA = AttachAxleToFrame(flAxle.physicsBody, carFrameBody, true);
+        steerWheelB = AttachAxleToFrame(frAxle.physicsBody, carFrameBody, true);
+    } else {
+      steerWheelA = AttachAxleToFrame(flAxle.physicsBody, carFrameBody);
+      steerWheelB = AttachAxleToFrame(frAxle.physicsBody, carFrameBody);
+    }
+    // 中輪
+    AttachAxleToFrame(mlAxle.physicsBody, carFrameBody);
+    AttachAxleToFrame(mrAxle.physicsBody, carFrameBody);
+
     AttachAxleToFrame(rlAxle.physicsBody, carFrameBody);
     AttachAxleToFrame(rrAxle.physicsBody, carFrameBody);
 
-    InitKeyboardControls(poweredWheelMotorA, poweredWheelMotorB, steerWheelA, steerWheelB);
+    InitKeyboardControls(
+        poweredWheelMotorA, poweredWheelMotorB,
+        steerWheelA, steerWheelB,
+        poweredWheelMotorML,
+        poweredWheelMotorMR);
 
     return carFrame;
 }
@@ -307,8 +336,12 @@ function AttachSteering(joint) {
  * @param {*} motorWheelB 
  * @param {*} steerWheelA 
  * @param {*} steerWheelB 
+ * @param {*} motorWheelML 
+ * @param {*} motorWheelMR 
  */
-function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB) {
+function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB,
+    motorWheelML, motorWheelMR,
+) {
     let forwardPressed = false;
     let backPressed = false;
     let leftPressed = false;
@@ -339,7 +372,7 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
         }
     });
 
-  // 毎フレームの描画前処理
+  /** 毎フレームの描画前処理 */
   const _processInput = () => {
     const drive = _getDrive();
     {
@@ -378,6 +411,7 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
       forwardPressed = drive.accel;
     }
 
+    if (false) {
         const [innerAngle, outerAngle] = CalculateWheelAngles(currentSteeringAngle);
 
         steerWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, outerAngle);
@@ -392,9 +426,25 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
         } else if (!forwardPressed && !backPressed) {
             currentSpeed *= 0.99;
         }
+    }
 
-        motorWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
-        motorWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
+    const L = 0;
+    const R = 1;
+    const currentSpeeds = [0, 0];
+    for (const pad of navigator.getGamepads()) {
+      if (!pad) {
+        continue;
+      }
+      currentSpeeds[L] = - pad.axes[1] * 100; // Y軸
+      currentSpeeds[R] = - pad.axes[2] * 100; // Z軸
+    }
+
+    //motorWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
+    //motorWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
+
+    const axis = BABYLON.PhysicsConstraintAxis.ANGULAR_X;
+    motorWheelML.setAxisMotorTarget(axis, currentSpeeds[L]);
+    motorWheelMR.setAxisMotorTarget(axis, currentSpeeds[R]);
   };
   scene.onBeforeRenderObservable.add(_processInput);
 }
