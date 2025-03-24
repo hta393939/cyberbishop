@@ -108,11 +108,17 @@ function CreateCar() {
 
     carFrame.position = new BABYLON.Vector3(0, 0.3, 0);
     carFrame.visibility = 0.5;
-    /** デフォルトは 1000 */
-    //const carFrameMass = 1000;
-    const carFrameMass = 200;
+    /** NOTE: 車の重量 デフォルトは 1000 */
+    const carFrameMass = 1000;
+    //const carFrameMass = 200;
+    //const carFrameMass = 2000;
     const carFrameBody = AddDynamicPhysics(carFrame, carFrameMass, 0, 0);
     FilterMeshCollisions(carFrame);
+
+  const ld = carFrameBody.getLinearDamping();
+  const ad = carFrameBody.getAngularDamping();
+  console.log('damping', ld, ad);
+  carFrameBody.setAngularDamping(0);
 
     /** 前左 */
     const flWheel = CreateWheel(new BABYLON.Vector3(5, 0, 8));
@@ -352,7 +358,8 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
     let currentSteeringAngle = 0;
     /** デフォルトは 150 */
     //let maxSpeed = 150;
-    let maxSpeed = 200;
+    //let maxSpeed = 200;
+    let maxSpeed = 600;
     /** デフォルトは 30 度 */
     const maxSteeringAngle = Math.PI / 6;
 
@@ -374,11 +381,9 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
 
   /** 毎フレームの描画前処理 */
   const _processInput = () => {
-    const drive = _getDrive();
     {
       const ts = Date.now();
-      globalThis.angle = drive.angle;
-      document.body.dataset['angle'] = `${globalThis.angle.toFixed(2)}`;
+
       const carFrame = globalThis._carFrame;
       if (globalThis._prePosition) {
         const diffts = ts - globalThis._prets;
@@ -406,9 +411,9 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
             currentSteeringAngle *= 0.98;
         }
     } else {
-      currentSteeringAngle = drive.angle * Math.PI / 180;
-      brakePressed = drive.brake;
-      forwardPressed = drive.accel;
+      //currentSteeringAngle = drive.angle * Math.PI / 180;
+      //brakePressed = drive.brake;
+      //forwardPressed = drive.accel;
     }
 
     if (false) {
@@ -435,8 +440,9 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
       if (!pad) {
         continue;
       }
-      currentSpeeds[L] = - pad.axes[1] * 100; // Y軸
-      currentSpeeds[R] = - pad.axes[2] * 100; // Z軸
+      const rate = 600;
+      currentSpeeds[L] = - pad.axes[1] * rate; // Y軸
+      currentSpeeds[R] = - pad.axes[2] * rate; // Z軸
     }
 
     //motorWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
@@ -506,6 +512,9 @@ function AddWheelPhysics(mesh, mass, bounce, friction) {
     physicsShape.material = { restitution: bounce, friction: friction };
     physicsBody.shape = physicsShape;
 
+    // NOTE: 角度減衰
+    physicsBody.setAngularDamping(0);
+
     return physicsBody;
 }
 
@@ -519,6 +528,9 @@ function AddAxlePhysics(mesh, mass, bounce, friction) {
     physicsShape.material = { restitution: bounce, friction: friction };
     physicsBody.shape = physicsShape;
 
+    // NOTE: 角度減衰
+    physicsBody.setAngularDamping(0);
+
     return physicsBody;
 }
 
@@ -528,6 +540,9 @@ function AddDynamicPhysics(mesh, mass, bounce, friction) {
     physicsBody.setMassProperties({ mass: mass });
     physicsShape.material = { restitution: bounce, friction: friction };
     physicsBody.shape = physicsShape;
+
+    // NOTE: 角度減衰
+    physicsBody.setAngularDamping(0);
 
     return physicsBody;
 }

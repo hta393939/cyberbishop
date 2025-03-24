@@ -9,6 +9,8 @@ export class UIClass extends EventTarget {
   constructor() {
     super();
 
+    this.tb3 = null;
+
     this.userActions = {
       mainshot: {
         key: 'z',
@@ -74,9 +76,9 @@ export class UIClass extends EventTarget {
     });
   }
 
-/**
- * @see https://doc.babylonjs.com/features/featuresDeepDive/gui/gui#textblock
- */
+  /**
+   * @see https://doc.babylonjs.com/features/featuresDeepDive/gui/gui#textblock
+   */
   init() {
     const advancedTexture = new BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI('UI');
 
@@ -131,6 +133,7 @@ export class UIClass extends EventTarget {
     {
       const panel = new BABYLON.GUI.StackPanel();
       panel.left = '-200px';
+      panel.top = '-200px';
       panel.width = '512px'; // 幅
       panel.isVertical = false; // 水平
       advancedTexture.addControl(panel);
@@ -172,7 +175,7 @@ export class UIClass extends EventTarget {
 
     { // 右置き
       const panel = new BABYLON.GUI.StackPanel();
-      panel.left = `${400}px`; // 'calc()' は書け無さそう
+      panel.left = `${100}px`; // 'calc()' は書け無さそう
       panel.width = '512px'; // 幅
       panel.isVertical = false; // 水平
       advancedTexture.addControl(panel);
@@ -201,12 +204,14 @@ export class UIClass extends EventTarget {
       {
         const tb = new BABYLON.GUI.TextBlock();
         tb.text = 'waldo';
-        tb.width = '160px';
+        tb.width = '320px';
         tb.color = 'white';
         tb.outlineWidth = 8;
         tb.outlineColor = 'black';
         tb.style = mainStyle;
         panel.addControl(tb);
+
+        this.tb3 = tb;
       }
     }
 
