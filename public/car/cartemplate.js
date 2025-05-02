@@ -410,12 +410,13 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
         steerWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, outerAngle);
         steerWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_Y, innerAngle);
 
+        const accelPer = param.accelPer || 8;
         if (brakePressed) {
             currentSpeed = 0;
         } else if (forwardPressed && currentSpeed < maxSpeed) {
-            currentSpeed += 8;
+            currentSpeed += accelPer;
         } else if (backPressed && currentSpeed > -maxSpeed * 0.5) {
-            currentSpeed -= 8;
+            currentSpeed -= accelPer;
         } else if (!forwardPressed && !backPressed) {
             currentSpeed *= 0.99;
         }

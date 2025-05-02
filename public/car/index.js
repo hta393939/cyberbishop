@@ -242,7 +242,7 @@ class Misc {
     {
       const tb = this.ui?.tbAngle;
       if (tb) {
-        tb.text = `${((globalThis._currentSteeringAngle ?? 0) * 180 / Math.PI).toFixed(1)} ang`;
+        tb.text = `${((globalThis._currentSteeringAngle ?? 0) * 180 / Math.PI).toFixed(1)} deg`;
       }
     }
 
@@ -268,12 +268,13 @@ class Misc {
     const carParam = {
       fwStaticFriction: 10 * 1,
       fwDynamicFriction: 10 * 1,
-      bwStaticFriction: 0.8,
-      bwDynamicFriction: 0.8, // 50 デフォルト
-      mass: 1000 * 2, // 1000 デフォルト
-      fwTireMass: 100 * 10, // 100 デフォルト
-      bwTireMass: 100 * 10, // 100 デフォルト
+      bwStaticFriction: 0.8 * 0 + 1,
+      bwDynamicFriction: 0.8 * 0 + 1, // 50 デフォルト
+      mass: 1000 * 2, // 1000 デフォルト。4000 は沈みすぎ
+      fwTireMass: 100 * 4, // 100 デフォルト 1000 はすぐスピンする
+      bwTireMass: 100 * 4, // 100 デフォルト
       maxSpeed: 150 * 10, // 150 デフォルト
+      accelPer: 8 * 10, // 8 デフォルト
     };
 
     const retscene = await createScene(carParam);
