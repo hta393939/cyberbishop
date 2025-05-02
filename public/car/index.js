@@ -240,7 +240,8 @@ class Misc {
 
   /**
    * 物理演算含む第二次初期化
-   * @param {*} scene 
+   * 車作成もこちら
+   * @param {Babylon.Scene} scene 
    */
   async secondInit(scene) {
     console.log('secondInit');
@@ -253,7 +254,14 @@ class Misc {
     scene.enablePhysics(new BABYLON.Vector3(0, -240, 0),
       havokPlugin);
 
-    const retscene = await createScene();
+    /** @type {Param} */
+    const carParam = {
+      dynamicFriction: 50,
+      staticFriction: 50,
+      mass: 1000,
+    };
+
+    const retscene = await createScene(carParam);
 
     { // 地面用テクスチャを生成する
       const tex = new BABYLON.Texture('./ground1.png', scene);

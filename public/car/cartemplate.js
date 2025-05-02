@@ -1,3 +1,9 @@
+/**
+ * @file cartemplate.js
+ */
+
+console.log(`%c cartemplate.js`, 'color: #00f; font-size: 1.5em; font-weight: bold;');
+
 /** タイヤの材質 */
 let _tyreMaterial;
 const debugColours = [];
@@ -58,7 +64,8 @@ const _getDrive = () => {
   return obj;
 };
 
-async function createScene() {
+/** @type {Param} param */
+async function createScene(param) {
     // 外から渡す
     const havokInstance = globalThis.havokInstance;
     console.log('havokInstance', havokInstance);
@@ -87,7 +94,7 @@ async function createScene() {
 
     InitTyreMaterial();
     CreateGroundAndWalls();
-    camera.lockedTarget = CreateCar();
+    camera.lockedTarget = CreateCar(param);
 
     engine.runRenderLoop(() => {
         if (scene && scene.activeCamera) {
@@ -98,9 +105,12 @@ async function createScene() {
     return scene;
 }
 
-/** 1台の車を作成する */
-function CreateCar() {
-    const carFrame = BABYLON.MeshBuilder.CreateBox("Frame", { height: 1, width: 12, depth: 24, faceColors: debugColours });
+/** 1台の車を作成する
+ * @param {Param} param 
+ */
+function CreateCar(param) {
+    const carFrame = BABYLON.MeshBuilder.CreateBox("Frame",
+        { height: 1, width: 12, depth: 24, faceColors: debugColours });
   {
     globalThis._carFrame = carFrame;
     globalThis._prePosition = null;
@@ -109,8 +119,7 @@ function CreateCar() {
     carFrame.position = new BABYLON.Vector3(0, 0.3, 0);
     carFrame.visibility = 0.5;
     /** デフォルトは 1000 */
-    //const carFrameMass = 1000;
-    const carFrameMass = 200;
+    const carFrameMass = param.mass || 1000;
     const carFrameBody = AddDynamicPhysics(carFrame, carFrameMass, 0, 0);
     FilterMeshCollisions(carFrame);
 
@@ -133,8 +142,8 @@ function CreateCar() {
     }
 
     for (const v of [
-        { mesh: flWheel, fric: 50 }, // テンプレートでは 50
-        { mesh: frWheel, fric: 50 },
+        { mesh: flWheel, fric: param.dynamicFriction ?? 50 }, // テンプレートでは 50
+        { mesh: frWheel, fric: param.dynamicFriction ?? 50 }, // 0.6 から面白そう 0.9 はちと足りない
         { mesh: rlWheel, fric: 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
         { mesh: rrWheel, fric: 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
     ]) {
