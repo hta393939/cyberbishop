@@ -256,9 +256,11 @@ class Misc {
 
     /** @type {Param} */
     const carParam = {
-      dynamicFriction: 50,
-      staticFriction: 50,
-      mass: 1000,
+      fwStaticFriction: 50,
+      fwDynamicFriction: 50,
+      bwStaticFriction: 0.8,
+      bwDynamicFriction: 0.8, // 50 デフォルト
+      mass: 1000 * 2, // 1000 デフォルト
     };
 
     const retscene = await createScene(carParam);

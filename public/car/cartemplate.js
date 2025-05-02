@@ -142,10 +142,10 @@ function CreateCar(param) {
     }
 
     for (const v of [
-        { mesh: flWheel, fric: param.dynamicFriction ?? 50 }, // テンプレートでは 50
-        { mesh: frWheel, fric: param.dynamicFriction ?? 50 }, // 0.6 から面白そう 0.9 はちと足りない
-        { mesh: rlWheel, fric: 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
-        { mesh: rrWheel, fric: 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
+        { mesh: flWheel, fric: param.fwDynamicFriction ?? 50 }, // テンプレートでは 50
+        { mesh: frWheel, fric: param.fwDynamicFriction ?? 50 }, // 0.6 から面白そう 0.9 はちと足りない
+        { mesh: rlWheel, fric: param.bwDynamicFriction ?? 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
+        { mesh: rrWheel, fric: param.bwDynamicFriction ?? 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
     ]) {
         AddWheelPhysics(v.mesh, 100, 0.1, v.fric);
         FilterMeshCollisions(v.mesh);
@@ -455,7 +455,7 @@ function CreateGroundAndWalls() {
  * @param {BABYLON.AbstractMesh} mesh 
  * @param {number} mass 質量
  * @param {number} bounce 反発
- * @param {number} friction 摩擦 
+ * @param {number} friction 共通摩擦 
  * @returns 
  */
 function AddWheelPhysics(mesh, mass, bounce, friction) {
