@@ -148,16 +148,16 @@ function CreateCar(param) {
     for (const v of [
         { mesh: flWheel,
             mass: param.fwTireMass ?? 100,
-            fric: param.fwDynamicFriction ?? 50 }, // テンプレートでは 50
+            fric: param.fwFriction ?? 50 }, // テンプレートでは 50
         { mesh: frWheel,
             mass: param.fwTireMass ?? 100,
-            fric: param.fwDynamicFriction ?? 50 }, // 0.6 から面白そう 0.9 はちと足りない
+            fric: param.fwFriction ?? 50 }, // 0.6 から面白そう 0.9 はちと足りない
         { mesh: rlWheel,
             mass: param.bwTireMass ?? 100,
-            fric: param.bwDynamicFriction ?? 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
+            fric: param.bwFriction ?? 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
         { mesh: rrWheel,
             mass: param.bwTireMass ?? 100,
-            fric: param.bwDynamicFriction ?? 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
+            fric: param.bwFriction ?? 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
     ]) {
         AddWheelPhysics(v.mesh, v.mass, 0.1, v.fric);
         FilterMeshCollisions(v.mesh);

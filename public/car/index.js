@@ -264,12 +264,12 @@ class Misc {
     scene.enablePhysics(new BABYLON.Vector3(0, -240, 0),
       havokPlugin);
 
-    /** @type {Param} */
+    /**
+     * @type {Param}
+     */
     const carParam = {
-      fwStaticFriction: 10 * 1,
-      fwDynamicFriction: 10 * 1,
-      bwStaticFriction: 0.8 * 0 + 1,
-      bwDynamicFriction: 0.8 * 0 + 1, // 50 デフォルト
+      fwFriction: 10 * 1,
+      bwFriction: 0.9 * 1 + 1 * 0, // 1だとドリフトしなくね?? // 50 デフォルト
       mass: 1000 * 2, // 1000 デフォルト。4000 は沈みすぎ
       fwTireMass: 100 * 4, // 100 デフォルト 1000 はすぐスピンする
       bwTireMass: 100 * 4, // 100 デフォルト
