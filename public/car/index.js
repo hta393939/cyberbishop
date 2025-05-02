@@ -202,6 +202,9 @@ class Misc {
       ui.addEventListener(UIClass.EVENT_ACTION, ev => {
         console.log('action fire', ev);
       });
+      ui.addEventListener(UIClass.EVENT_CHANGECHECK, ev => {
+        console.log('ev.detail', ev.detail);
+      });
       ui.init(scene);
     }
 
@@ -236,6 +239,13 @@ class Misc {
       }
     }
 
+    {
+      const tb = this.ui?.tbAngle;
+      if (tb) {
+        tb.text = `${((globalThis._currentSteeringAngle ?? 0) * 180 / Math.PI).toFixed(1)} ang`;
+      }
+    }
+
   }
 
   /**
@@ -256,11 +266,14 @@ class Misc {
 
     /** @type {Param} */
     const carParam = {
-      fwStaticFriction: 50,
-      fwDynamicFriction: 50,
+      fwStaticFriction: 10 * 1,
+      fwDynamicFriction: 10 * 1,
       bwStaticFriction: 0.8,
       bwDynamicFriction: 0.8, // 50 デフォルト
       mass: 1000 * 2, // 1000 デフォルト
+      fwTireMass: 100 * 10, // 100 デフォルト
+      bwTireMass: 100 * 10, // 100 デフォルト
+      maxSpeed: 150 * 10, // 150 デフォルト
     };
 
     const retscene = await createScene(carParam);
@@ -435,7 +448,7 @@ class Misc {
         box,
         BABYLON.PhysicsShapeType.BOX,
         {
-          mass: 0, // 動かない．mass 0 が観察して発火する
+          mass: 0, // 動かない。mass 0 が観察して発火する
           restitution: 1, // 当たると少し反発
         },
         scene,

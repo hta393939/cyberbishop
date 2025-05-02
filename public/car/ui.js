@@ -5,6 +5,7 @@
 export class UIClass extends EventTarget {
   static EVENT_CLICK = 'click';
   static EVENT_ACTION = 'action';
+  static EVENT_CHANGECHECK = 'changecheck';
 
   constructor() {
     super();
@@ -97,6 +98,7 @@ export class UIClass extends EventTarget {
       const button = BABYLON.GUI.Button.CreateSimpleButton('loading1', 'loading...');
       //button.top = '-200px';
       const tb = button.textBlock;
+      //tb.text = `load`;
       tb.top = '-160px';
       tb.outlineWidth = 10;
       tb.outlineColor = 'white';
@@ -132,7 +134,8 @@ export class UIClass extends EventTarget {
       const panel = new BABYLON.GUI.StackPanel();
       panel.left = '-200px';
       panel.width = '512px'; // 幅
-      panel.isVertical = false; // 水平
+      panel.height = '512px';
+      panel.isVertical = false; // false: 水平
       advancedTexture.addControl(panel);
 
       {
@@ -168,6 +171,7 @@ export class UIClass extends EventTarget {
 
         this.tbFPS = tb;
       }
+
     }
 
     { // 右置き
@@ -185,12 +189,19 @@ export class UIClass extends EventTarget {
         cb.color = 'green';
         cb.onIsCheckedChangedObservable.add((value) => {
           console.log('checkbox', value);
+          const cev = new CustomEvent(UIClass.EVENT_CHANGECHECK, {
+            detail: {
+              name: 'autoaccel',
+              value,
+            }
+          });
+          this.dispatchEvent(cev);
         });
         panel.addControl(cb);
       }
       {
         const tb = new BABYLON.GUI.TextBlock();
-        tb.text = 'corge';
+        tb.text = 'auto';
         tb.width = '160px'; // 幅
         tb.color = 'white';
         tb.outlineWidth = 8;
@@ -202,6 +213,40 @@ export class UIClass extends EventTarget {
         const tb = new BABYLON.GUI.TextBlock();
         tb.text = 'waldo';
         tb.width = '160px';
+        tb.color = 'white';
+        tb.outlineWidth = 8;
+        tb.outlineColor = 'black';
+        tb.style = mainStyle;
+        panel.addControl(tb);
+      }
+    }
+
+    {
+      const panel = new BABYLON.GUI.StackPanel();
+      panel.left = `${300}px`; // 'calc()' は書け無さそう
+      panel.top = `100px`;
+      panel.width = '512px'; // 幅
+      panel.isVertical = true; // 垂直
+      advancedTexture.addControl(panel);
+
+      {
+        const tb = new BABYLON.GUI.TextBlock();
+        tb.text = 'angle';
+        tb.width = '160px';
+        tb.height = '48px';
+        tb.color = 'white';
+        tb.outlineWidth = 8;
+        tb.outlineColor = 'red';
+        tb.style = mainStyle;
+        panel.addControl(tb);
+
+        this.tbAngle = tb;
+      }
+      {
+        const tb = new BABYLON.GUI.TextBlock();
+        tb.text = 'rightbottom';
+        tb.width = '160px';
+        tb.height = '48px';
         tb.color = 'white';
         tb.outlineWidth = 8;
         tb.outlineColor = 'black';

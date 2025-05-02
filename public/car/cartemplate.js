@@ -17,7 +17,11 @@ const FILTERS = { CarParts: 1, Environment: 2 }
 
 const _getDrive = () => {
   const pads = navigator.getGamepads();
-  const obj = { angle: 0, accel: 0, brake: 0 };
+  const obj = {
+    angle: 0,
+    accel: 0 | 1, // 常時on
+    brake: 0,
+  };
   for (const pad of pads) {
     if (!pad) {
       continue;
@@ -142,12 +146,20 @@ function CreateCar(param) {
     }
 
     for (const v of [
-        { mesh: flWheel, fric: param.fwDynamicFriction ?? 50 }, // テンプレートでは 50
-        { mesh: frWheel, fric: param.fwDynamicFriction ?? 50 }, // 0.6 から面白そう 0.9 はちと足りない
-        { mesh: rlWheel, fric: param.bwDynamicFriction ?? 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
-        { mesh: rrWheel, fric: param.bwDynamicFriction ?? 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
+        { mesh: flWheel,
+            mass: param.fwTireMass ?? 100,
+            fric: param.fwDynamicFriction ?? 50 }, // テンプレートでは 50
+        { mesh: frWheel,
+            mass: param.fwTireMass ?? 100,
+            fric: param.fwDynamicFriction ?? 50 }, // 0.6 から面白そう 0.9 はちと足りない
+        { mesh: rlWheel,
+            mass: param.bwTireMass ?? 100,
+            fric: param.bwDynamicFriction ?? 0.8 }, // 後輪の摩擦を減らしてみる 0.2 は NG
+        { mesh: rrWheel,
+            mass: param.bwTireMass ?? 100,
+            fric: param.bwDynamicFriction ?? 0.8 }, // 0.6 から面白そう 0.9 はちと足りない
     ]) {
-        AddWheelPhysics(v.mesh, 100, 0.1, v.fric);
+        AddWheelPhysics(v.mesh, v.mass, 0.1, v.fric);
         FilterMeshCollisions(v.mesh);
     }
 
@@ -161,7 +173,9 @@ function CreateCar(param) {
     AttachAxleToFrame(rlAxle.physicsBody, carFrameBody);
     AttachAxleToFrame(rrAxle.physicsBody, carFrameBody);
 
-    InitKeyboardControls(poweredWheelMotorA, poweredWheelMotorB, steerWheelA, steerWheelB);
+    InitKeyboardControls(poweredWheelMotorA, poweredWheelMotorB, steerWheelA, steerWheelB,
+        param,
+    );
 
     return carFrame;
 }
@@ -316,8 +330,9 @@ function AttachSteering(joint) {
  * @param {*} motorWheelB 
  * @param {*} steerWheelA 
  * @param {*} steerWheelB 
+ * @param {Param} param
  */
-function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB) {
+function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB, param) {
     let forwardPressed = false;
     let backPressed = false;
     let leftPressed = false;
@@ -326,9 +341,8 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
 
     let currentSpeed = 0;
     let currentSteeringAngle = 0;
-    /** デフォルトは 150 */
-    //let maxSpeed = 150;
-    let maxSpeed = 200;
+    /** 0は不許可。デフォルトは 150 */
+    let maxSpeed = param.maxSpeed || 150;
     /** デフォルトは 30 度 */
     const maxSteeringAngle = Math.PI / 6;
 
@@ -351,7 +365,7 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
   // 毎フレームの描画前処理
   const _processInput = () => {
     const drive = _getDrive();
-    {
+    { // 移動速度の計算
       const ts = Date.now();
       globalThis.angle = drive.angle;
       document.body.dataset['angle'] = `${globalThis.angle.toFixed(2)}`;
@@ -385,6 +399,10 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
       currentSteeringAngle = drive.angle * Math.PI / 180;
       brakePressed = drive.brake;
       forwardPressed = drive.accel;
+    }
+
+    {
+      globalThis._currentSteeringAngle = currentSteeringAngle;
     }
 
         const [innerAngle, outerAngle] = CalculateWheelAngles(currentSteeringAngle);
