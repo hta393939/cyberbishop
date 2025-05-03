@@ -76,13 +76,13 @@ async function createScene(param) {
 
     scene.enablePhysics(new BABYLON.Vector3(0, -240, 0), havokInstance);
 
-    scene.getPhysicsEngine().setTimeStep(1 / 500);
+    scene.getPhysicsEngine().setTimeStep(param.timeStep || 1 / 500);
 
     //
     // NOTE: To change the speed of the simulation without distoring the physics too much, leave the setTimeStep and 
     // update the setSubTimeStep (only the case when HavokPlugin() _useDeltaForWorldStep is set to false)
     //
-    scene.getPhysicsEngine().setSubTimeStep(4.5);
+    scene.getPhysicsEngine().setSubTimeStep(param.subTimeStep || 4.5);
 
   const camera = new BABYLON.FollowCamera("FollowCam", new BABYLON.Vector3(0, 10, -10), scene);
   camera.minZ = 2;
@@ -163,18 +163,28 @@ function CreateCar(param) {
         FilterMeshCollisions(v.mesh);
     }
 
+    // 前輪
     const poweredWheelMotorA = CreatePoweredWheelJoint(flAxle, flWheel);
     const poweredWheelMotorB = CreatePoweredWheelJoint(frAxle, frWheel);
-    CreateWheelJoint(rlAxle, rlWheel);
-    CreateWheelJoint(rrAxle, rrWheel);
+    /** @type {InputOption} */
+    const option = {};
+    if (param.useRearMotor) {
+      option.motorWheelRearL = CreatePoweredWheelJoint(rlAxle, rlWheel);
+      option.motorWheelRearR = CreatePoweredWheelJoint(rrAxle, rrWheel);
+    } else {
+        // 後輪
+      CreateWheelJoint(rlAxle, rlWheel);
+      CreateWheelJoint(rrAxle, rrWheel);
+    }
 
     const steerWheelA = AttachAxleToFrame(flAxle.physicsBody, carFrameBody, true);
     const steerWheelB = AttachAxleToFrame(frAxle.physicsBody, carFrameBody, true);
-    AttachAxleToFrame(rlAxle.physicsBody, carFrameBody);
-    AttachAxleToFrame(rrAxle.physicsBody, carFrameBody);
+    AttachAxleToFrame(rlAxle.physicsBody, carFrameBody, false);
+    AttachAxleToFrame(rrAxle.physicsBody, carFrameBody, false);
 
     InitKeyboardControls(poweredWheelMotorA, poweredWheelMotorB, steerWheelA, steerWheelB,
-        param,
+      param,
+      option,
     );
 
     return carFrame;
@@ -300,6 +310,12 @@ function CreateWheelJoint(axle, wheel) {
     return motorJoint;
 }
 
+/**
+ * 目標指定型のモーター
+ * @param {*} axle 
+ * @param {*} wheel 
+ * @returns 
+ */
 function CreatePoweredWheelJoint(axle, wheel) {
     const motorJoint = CreateWheelJoint(axle, wheel);
 
@@ -331,8 +347,10 @@ function AttachSteering(joint) {
  * @param {*} steerWheelA 
  * @param {*} steerWheelB 
  * @param {Param} param
+ * @param {InputOption} option
  */
-function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB, param) {
+function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB,
+    param, option) {
     let forwardPressed = false;
     let backPressed = false;
     let leftPressed = false;
@@ -421,8 +439,11 @@ function InitKeyboardControls(motorWheelA, motorWheelB, steerWheelA, steerWheelB
             currentSpeed *= 0.99;
         }
 
-        motorWheelA.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
-        motorWheelB.setAxisMotorTarget(BABYLON.PhysicsConstraintAxis.ANGULAR_X, currentSpeed);
+    const ax = BABYLON.PhysicsConstraintAxis.ANGULAR_X;
+        motorWheelA.setAxisMotorTarget(ax, currentSpeed);
+        motorWheelB.setAxisMotorTarget(ax, currentSpeed);
+    option.motorWheelRearL?.setAxisMotorTarget(ax, currentSpeed);
+    option.motorWheelRearR?.setAxisMotorTarget(ax, currentSpeed);
   };
   scene.onBeforeRenderObservable.add(_processInput);
 }

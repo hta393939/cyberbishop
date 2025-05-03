@@ -16,6 +16,8 @@ declare interface Param {
 
   fwTireMass?: number;
   bwTireMass?: number;
+  /** 4WD */
+  useRearMotor: boolean;
 
   /**
    * 最大速度 150
@@ -25,9 +27,20 @@ declare interface Param {
   /** 1フレームでスピードを増やす値。デフォルト8 */
   accelPer?: number;
 
+  /** デフォルト 1/500 */
+  timeStep?: number;
+  /** デフォルト 4.5 */
+  subTimeStep?: number;
+
   cameraAcceleration?: number;
   maxCameraSpeed?: number;
 }
 
+declare interface InputOption {
+  /** 左後輪 */
+  motorWheelRearL?: unknown;
+  /** 右後輪 */
+  motorWheelRearR?: unknown;
+}
 
 

@@ -269,12 +269,15 @@ class Misc {
      */
     const carParam = {
       fwFriction: 10 * 1,
-      bwFriction: 0.9 * 1 + 1 * 0, // 1だとドリフトしなくね?? // 50 デフォルト
-      mass: 1000 * 2, // 1000 デフォルト。4000 は沈みすぎ
+      bwFriction: 0.8 * 1 + 1 * 0, // 1だとドリフトしなくね?? // 50 デフォルト
+      mass: 1000 * 1, // 1000 デフォルト。4000 は沈みすぎ
       fwTireMass: 100 * 4, // 100 デフォルト 1000 はすぐスピンする
       bwTireMass: 100 * 4, // 100 デフォルト
+      useRearMotor: true,
       maxSpeed: 150 * 10, // 150 デフォルト
-      accelPer: 8 * 10, // 8 デフォルト
+      accelPer: 8 * 50, // 8 デフォルト
+      timeStep: 0.5 / 1000, // 1 / 500 デフォルト
+      subTimeStep: 4.5 * 1, // 4.5 デフォルト
     };
 
     const retscene = await createScene(carParam);
