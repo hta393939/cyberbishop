@@ -1,6 +1,3 @@
-/**
- * @file index.js
- */
 
 import { UIClass } from "./ui.js";
 
@@ -200,10 +197,10 @@ class Misc {
     console.log('initEffek', context);
   }
 
-/**
- * canvas を描画する必要最低限
- * @param {*} param 
- */
+  /**
+   * canvas を描画する必要最低限
+   * @param {*} param 
+   */
   firstInit(param) {
     console.log('firstInit', param);
 
@@ -267,9 +264,9 @@ class Misc {
     });
   }
 
-/**
- * 高頻度に更新する
- */
+  /**
+   * 高頻度に更新する
+   */
   update() {
     const delta = this.scene.getEngine().getDeltaTime();
 
