@@ -1,2 +1,4 @@
 # cyberbishop
-ECMA Script 予定
+
+別目的で使用。  
+~~ECMA Script 予定~~

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>index</title>
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    カスタムの場合
+
+    <div id="pyxel-screen"></div>
+
+    <pyxel-run
+  script="
+import pyxel
+
+pyxel.init(200, 150)
+pyxel.cls(8)
+pyxel.line(20, 20, 180, 130, 7)
+pyxel.show()
+"
+></pyxel-run>
+
+
+    <script src="https://kitao.dev/pyxel/3.0.1/pyxel.js"></script>
+  </body>
+</html>
+
