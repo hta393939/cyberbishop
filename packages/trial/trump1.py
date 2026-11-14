@@ -6,9 +6,9 @@ import random
 
 W, H = 128, 128
 
-START_X = W / 2 - 48
-START_Y = H / 2 - 12
-MES_Y = 100
+START_X = 10
+START_Y = 100
+MES_Y = 104
 
 CI_GROUND = 3
 CI_MAINFONT = 7
@@ -17,7 +17,49 @@ MODE_TITLE = "title"
 MODE_PLAY = "play"
 MODE_GAME_OVER = "game_over"
 
-TUNNEL_TOTAL = 48
+
+class InputManager:
+  def __init__(self):
+    self.lefts = (pyxel.KEY_A, pyxel.KEY_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)
+    self.rights = (pyxel.KEY_D, pyxel.KEY_RIGHT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+    self.ups = (pyxel.KEY_W, pyxel.KEY_UP, pyxel.GAMEPAD1_BUTTON_DPAD_UP)
+    self.downs = (pyxel.KEY_S, pyxel.KEY_DOWN, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
+
+    self.buts = (pyxel.GAMEPAD1_BUTTON_A,
+      pyxel.GAMEPAD1_BUTTON_B,
+      pyxel.GAMEPAD1_BUTTON_X,
+      pyxel.GAMEPAD1_BUTTON_Y,
+      pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER,
+      pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)
+
+    self.keyss = (self.ups, self.rights, self.downs, self.lefts,
+      self.buts)
+
+    self.axes = (
+      pyxel.GAMEPAD1_AXIS_LEFTX,
+    )
+
+    self.mod_mask = 7
+    self.reset()
+
+  def reset(self):
+    self.counts = [0, 0, 0, 0, 0]
+    self.fires = [False, False, False, False, False]
+
+  def update(self):
+    """fires から取得する"""
+    for i in range(5):
+      keys = self.keyss[i]
+      kdown = 0
+      for k in keys:
+        kdown += 1 if pyxel.btn(k) else 0
+      if kdown >= 1:
+        self.counts[i] += 1
+      else:
+        self.counts[i] = 0
+    
+      self.fires[i] = (self.counts[i] & self.mod_mask) == 1
+
 
 class BaseSprite:
 
@@ -100,29 +142,35 @@ class Card(BaseSprite):
 
 class PlayerSprite(BaseSprite):
 
-    def __init__(self, x, y):
-        """ コンストラクタ """
-        super().__init__(x, y)
-        self.gravity = 0.4 # 重力
-        self.jump_x = 1.0 # ジャンプx
-        self.jump_y = -3.4 # ジャンプy
+  def __init__(self, x, y):
+    """ コンストラクタ """
+    super().__init__(x, y)
+    #self.gravity = 0.4 # 重力
+    #self.jump_x = 1.0 # ジャンプx
+    #self.jump_y = -3.4 # ジャンプy
 
-    def update(self):
-        """ 更新処理 """
-        super().update()
-        self.vy += self.gravity # Gravity
+  def update(self, fires):
+    """ 更新処理 """
+    super().update()
+    #self.vy += self.gravity # Gravity
+    if fires[3]:
+      self.x -= 10
+    if fires[1] or fires[4]:
+      self.x += 10
+    if fires[0]:
+      self.y -= 20
+    if fires[2]:
+      self.y += 20
 
-    def draw(self):
+  def draw(self):
         """ 描画処理 """
-        pyxel.blt(self.x, self.y, 0, 
-            0, 16, self.w, self.h, 0)
+        pyxel.blt(self.x, self.y, 0,
+            16, 16, self.w, self.h, 0)
+        pyxel.blt(self.x, self.y + 8, 0,
+            24, 16, self.w, self.h, 0)
         # Debug
         #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
-    def jump(self):
-        """ ジャンプ """
-        self.vx = self.jump_x # ジャンプx
-        self.vy = self.jump_y # ジャンプy
 
 class TunnelSprite(BaseSprite):
 
@@ -154,6 +202,8 @@ class Game:
         # プレイヤーを初期化
         self.player = PlayerSprite(START_X, START_Y)
 
+        self.input_manager = InputManager()
+
         # ステージを初期化
         self.reset()
 
@@ -168,6 +218,8 @@ class Game:
         # スコアを更新
         self.score = int(self.player.x - START_X)
 
+        self.input_manager.update()
+
         # コントロール
         self.control()
 
@@ -175,7 +227,7 @@ class Game:
         if self.game_mode != MODE_PLAY: return
 
         # プレイヤーを更新
-        self.player.update()
+        self.player.update(self.input_manager.fires)
 
         # トンネルを更新
         for tunnel in self.tunnels:
@@ -201,8 +253,7 @@ class Game:
         # カメラ(セット)
         #pyxel.camera(self.player.x - START_X, 0)
 
-        # プレイヤーを描画
-        self.player.draw()
+
 
         # トンネルを描画
         for tunnel in self.tunnels:
@@ -210,6 +261,9 @@ class Game:
 
         for card in self.cards:
           card.draw()
+
+        # プレイヤーを描画
+        self.player.draw()
 
         #pyxel.camera() # カメラ(リセット)
 
@@ -238,28 +292,25 @@ class Game:
         self.set_card()
 
     def control(self):
-        """ コントロール """
-        if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
+      """ コントロール """
+      if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
 
-        # Title -> Play
-        if self.game_mode == MODE_TITLE:
-            self.game_mode = MODE_PLAY
+      # Title -> Play
+      if self.game_mode == MODE_TITLE:
+        self.game_mode = MODE_PLAY
 
-        # Game Over -> Title
-        if self.game_mode == MODE_GAME_OVER:
-            self.game_mode = MODE_TITLE
-            # Reset
-            self.reset()
+      # Game Over -> Title
+      if self.game_mode == MODE_GAME_OVER:
+        self.game_mode = MODE_TITLE
+        # Reset
+        self.reset()
 
-        # ジャンプ
-        if self.game_mode == MODE_PLAY:
-            self.player.jump()
 
     def set_card(self):
       self.cards = []
       for i in range(13):
         for j in range(4):
-          card = Card(i * 10, 16 + 20 * j,
+          card = Card(i * 10, 20 + 20 * j,
             (Card.SPADES, Card.HEARTS, Card.DIAMONDS, Card.CLUBS)[j],
             i + 1,
           )
@@ -267,7 +318,7 @@ class Game:
           self.cards.append(card)
 
       if True:
-        card = Card.joker(10, 96)
+        card = Card.joker(10, 100)
         self.cards.append(card)
 
 def main():
