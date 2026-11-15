@@ -12,6 +12,8 @@ MES_Y = 104
 
 CI_GROUND = 3
 CI_MAINFONT = 7
+# 透明キーインデックス
+CI_TR0 = 0
 
 MODE_TITLE = "title"
 MODE_PLAY = "play"
@@ -163,11 +165,12 @@ class PlayerSprite(BaseSprite):
       self.y += 20
 
   def draw(self):
-        """ 描画処理 """
-        pyxel.blt(self.x, self.y, 0,
-            16, 16, self.w, self.h, 0)
-        pyxel.blt(self.x, self.y + 8, 0,
-            24, 16, self.w, self.h, 0)
+    """ 描画処理 """
+    start_x = 160 + (16 if (pyxel.frame_count % 30) < 15 else 0)
+    pyxel.blt(self.x, self.y, 0,
+      start_x, 24, self.w, self.h, CI_TR0)
+    pyxel.blt(self.x, self.y + 8, 0,
+      start_x + 8, 24, self.w, self.h, CI_TR0)
         # Debug
         #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
