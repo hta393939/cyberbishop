@@ -4,6 +4,8 @@ import pyxel
 import math
 import random
 
+from pyxel.cube import Node, Camera, Shading, Vec3, Mat4
+
 W, H = 128, 128
 
 START_X = 10
@@ -191,31 +193,50 @@ class TunnelSprite(BaseSprite):
         # Debug
         #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
+class StaticCube(Node):
+  def on_draw(self):
+    self.box(Mat4.IDENTITY, Vec3(30, 30, 30), 11)
+
 # Game
 class Game:
-    def __init__(self):
-        """ コンストラクタ """
+  def __init__(self):
+    """ コンストラクタ """
 
-        # スコアを初期化
-        self.score = 0
+    # スコアを初期化
+    self.score = 0
 
-        # ゲームモード
-        self.game_mode = MODE_TITLE
+    # ゲームモード
+    self.game_mode = MODE_TITLE
 
-        # プレイヤーを初期化
-        self.player = PlayerSprite(START_X, START_Y)
+    # プレイヤーを初期化
+    self.player = PlayerSprite(START_X, START_Y)
 
-        self.input_manager = InputManager()
+    self.input_manager = InputManager()
 
-        # ステージを初期化
-        self.reset()
+    # ステージを初期化
+    self.reset()
 
-        # Pyxelの起動
-        pyxel.init(W, H, title="cyber")
-        pyxel.load("my_resource.pyxres")
-        pyxel.run(self.update, self.draw)
+    # Pyxelの起動
+    pyxel.init(W, H, title="cyber")
+    pyxel.load("my_resource.pyxres")
 
-    def update(self):
+    self.root = Node()
+    self.root.add_child(StaticCube())
+
+    shading = Shading(pyxel.colors)
+    shading.direction = Vec3(0.4, -1, -0.5)
+    self.root.shading = shading
+
+    self.root.camera = Camera()
+    self.root.camera.clear_color = 0
+    self.root.camera.transform = Mat4.look_at(
+      Vec3(0.0, 50.0, 80.0), Vec3.ZERO
+    )
+
+
+    pyxel.run(self.update, self.draw)
+
+  def update(self):
         """ 更新処理 """
 
         # スコアを更新
@@ -227,7 +248,7 @@ class Game:
         self.control()
 
         # プレイ中判定
-        if self.game_mode != MODE_PLAY: return
+        #if self.game_mode != MODE_PLAY: return
 
         # プレイヤーを更新
         self.player.update(self.input_manager.fires)
@@ -242,13 +263,19 @@ class Game:
         for card in self.cards:
           card.update()
 
-        # 落下判定
-        if H < self.player.y: 
-            self.game_mode = MODE_GAME_OVER
+        self.root.update()
 
-    def draw(self):
+        # 落下判定
+        #if H < self.player.y: 
+        #    self.game_mode = MODE_GAME_OVER
+
+  def draw(self):
         """ 描画処理 """
         pyxel.cls(CI_GROUND)
+
+        self.root.draw(0, 0, pyxel.width, pyxel.height)
+        if True:
+          return
 
         # 回転は??
         pyxel.camera(self.player.x - START_X, 0)
@@ -280,19 +307,21 @@ class Game:
         pyxel.text(10, 4,
             "SCORE:{:04}".format(self.score), CI_MAINFONT)
 
-    def reset(self):
-        """ ステージを初期化 """
+  def reset(self):
+    """ ステージを初期化 """
 
-        # プレイヤー
-        self.player.x = START_X
-        self.player.y = START_Y
+    # プレイヤー
+    self.player.x = START_X
+    self.player.y = START_Y
 
-        # トンネル
-        self.tunnels = []
+    self.rot = 0
 
-        self.set_card()
+    # トンネル
+    self.tunnels = []
 
-    def control(self):
+    self.set_card()
+
+  def control(self):
       """ コントロール """
       if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
 
@@ -307,7 +336,7 @@ class Game:
         self.reset()
 
 
-    def set_card(self):
+  def set_card(self):
       self.cards = []
       for i in range(13):
         for j in range(4):
@@ -323,10 +352,10 @@ class Game:
         self.cards.append(card)
 
 def main():
-    """ メイン処理 """
-    Game()
+  """ メイン処理 """
+  Game()
 
 if __name__ == "__main__":
-    main()
+  main()
 
 
