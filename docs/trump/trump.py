@@ -6,8 +6,6 @@ import random
 
 W, H = 128, 128
 
-START_X = 10
-START_Y = 100
 MES_Y = 104
 
 CI_GROUND = 3
@@ -39,6 +37,9 @@ class InputManager:
 
     self.axes = (
       pyxel.GAMEPAD1_AXIS_LEFTX,
+      pyxel.GAMEPAD1_AXIS_LEFTY,
+      pyxel.GAMEPAD1_AXIS_RIGHTX,
+      pyxel.GAMEPAD1_AXIS_RIGHTY,
     )
 
     self.mod_mask = 7
@@ -50,8 +51,7 @@ class InputManager:
 
   def update(self):
     """fires から取得する"""
-    for i in range(5):
-      keys = self.keyss[i]
+    for (i, keys) in enumerate(self.keyss):
       kdown = 0
       for k in keys:
         kdown += 1 if pyxel.btn(k) else 0
@@ -64,38 +64,41 @@ class InputManager:
 
 
 class BaseSprite:
+  BW = 13
+  BH = 5
 
-    def __init__(self, x, y, w=8, h=8):
-        """ コンストラクタ """
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.vx = 0
-        self.vy = 0
+  def __init__(self, bx, by, w=8, h=8):
+    """ コンストラクタ """
+    self.bx = bx
+    self.by = by
+    self.calc()
+    self.w = w
+    self.h = h
 
-    def update(self):
-        """ 更新処理 """
-        self.x += self.vx
-        self.y += self.vy
+  def calc(self):
+    """ブロック番号から位置へ"""
+    self.x = self.bx * 10
+    self.y = self.by * 20
 
-    def draw(self):
-        """ 描画処理(派生クラスで実装) """
-        pass
+  def update(self):
+    """ 更新処理 """
+    pass
 
-    def move(self, spd, deg):
-        """ 移動 """
-        rad = deg * math.pi / 180
-        self.vx = spd * math.cos(rad) # x方向の速度
-        self.vy = spd * math.sin(rad) # y方向の速度
+  def draw(self):
+    """ 描画処理(派生クラスで実装) """
+    pass
 
-    def intersects(self, other):
-        """ 矩形同士の当たり判定(AABB) """
-        if other.x + other.w < self.x: return False
-        if self.x + self.w < other.x: return False
-        if other.y + other.h < self.y: return False
-        if self.y + self.h < other.y: return False
-        return True
+  def move(self, spd, deg):
+    """ 移動 """
+    pass
+
+  def intersects(self, other):
+    """ 矩形同士の当たり判定(AABB) """
+    if other.x + other.w < self.x: return False
+    if self.x + self.w < other.x: return False
+    if other.y + other.h < self.y: return False
+    if self.y + self.h < other.y: return False
+    return True
 
 class Card(BaseSprite):
   SPADES = 16
@@ -108,8 +111,12 @@ class Card(BaseSprite):
   JOKER_NUMBER = 25
   TEN_OFFSET = 26
   ACE = 30
-  def __init__(self, x, y, suit, number):
-    super().__init__(x, y)
+  def __init__(self, bx, by, suit, number):
+    super().__init__(0, 0)
+    self.bx = bx
+    self.by = by
+    self.calc()
+
     self.suit = suit
     self.number = number
     self.draw_number = number
@@ -144,25 +151,33 @@ class Card(BaseSprite):
 
 class PlayerSprite(BaseSprite):
 
-  def __init__(self, x, y):
+  def __init__(self, bx, by):
     """ コンストラクタ """
-    super().__init__(x, y)
-    #self.gravity = 0.4 # 重力
-    #self.jump_x = 1.0 # ジャンプx
-    #self.jump_y = -3.4 # ジャンプy
+    super().__init__(bx, by)
+    self.bx = bx
+    self.by = by
+    self.calc()
 
   def update(self, fires):
     """ 更新処理 """
     super().update()
-    #self.vy += self.gravity # Gravity
+
+    dx = 0
+    dy = 0
+
     if fires[3]:
-      self.x -= 10
+      dx = -1
     if fires[1] or fires[4]:
-      self.x += 10
+      dx = 1
     if fires[0]:
-      self.y -= 20
+      dy = -1
     if fires[2]:
-      self.y += 20
+      dy = 1
+
+    self.bx += dx
+    self.by += dy
+    result = self.calc()
+
 
   def draw(self):
     """ 描画処理 """
@@ -171,130 +186,90 @@ class PlayerSprite(BaseSprite):
       start_x, 24, self.w, self.h, CI_TR0)
     pyxel.blt(self.x, self.y + 8, 0,
       start_x + 8, 24, self.w, self.h, CI_TR0)
-        # Debug
-        #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
-
-
-class TunnelSprite(BaseSprite):
-
-    def __init__(self, x, y, length, top_flg=False):
-        """ コンストラクタ """
-        super().__init__(x, y, 16, length*8)
-        self.length = length # トンネルの長さ
-        if(top_flg): self.y -= self.h # トンネル上
-
-    def draw(self):
-        """ 描画処理 """
-        # Top
-        pyxel.blt(self.x, self.y, 0, 
-            16, 16, self.w, 8, 0)
-        # Debug
-        #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
+      # Debug
+      #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
 # Game
 class Game:
-    def __init__(self):
-        """ コンストラクタ """
+  def __init__(self):
+    """ コンストラクタ """
 
-        # スコアを初期化
-        self.score = 0
+    # スコアを初期化
+    self.score = 0
 
-        # ゲームモード
-        self.game_mode = MODE_TITLE
+    # ゲームモード
+    self.game_mode = MODE_TITLE
 
-        # プレイヤーを初期化
-        self.player = PlayerSprite(START_X, START_Y)
+    # プレイヤーを初期化
+    self.player = PlayerSprite(0, 0)
 
-        self.input_manager = InputManager()
+    self.input_manager = InputManager()
 
-        # ステージを初期化
-        self.reset()
+    # ステージを初期化
+    self.reset()
 
-        # Pyxelの起動
-        pyxel.init(W, H, title="Hello, Pyxel!!")
-        pyxel.load("my_resource.pyxres")
-        pyxel.run(self.update, self.draw)
+    # Pyxelの起動
+    pyxel.init(W, H, title="Hello, Pyxel!!")
+    pyxel.load("my_resource.pyxres")
+    pyxel.run(self.update, self.draw)
 
-    def update(self):
-        """ 更新処理 """
+  def update(self):
+    """ 更新処理 """
 
-        # スコアを更新
-        self.score = int(self.player.x - START_X)
+    self.input_manager.update()
 
-        self.input_manager.update()
+    # コントロール
+    self.control()
 
-        # コントロール
-        self.control()
+    # プレイ中判定
+    if self.game_mode != MODE_PLAY: return
 
-        # プレイ中判定
-        if self.game_mode != MODE_PLAY: return
+    # プレイヤーを更新
+    self.player.update(self.input_manager.fires)
 
-        # プレイヤーを更新
-        self.player.update(self.input_manager.fires)
+    for card in self.cards:
+      card.update()
 
-        # トンネルを更新
-        for tunnel in self.tunnels:
-            tunnel.update()
-            if(tunnel.intersects(self.player)):
-                self.game_mode = MODE_GAME_OVER
-                break
+  def draw(self):
+    """ 描画処理 """
+    pyxel.cls(CI_GROUND)
 
-        for card in self.cards:
-          card.update()
+    # タイルマップ
+    #pyxel.bltm(0, 0, 0, 0, 0, 192, 128, 0)
 
-        # 落下判定
-        if H < self.player.y: 
-            self.game_mode = MODE_GAME_OVER
+    # カメラ(セット)
+    #pyxel.camera(self.player.x - START_X, 0)
 
-    def draw(self):
-        """ 描画処理 """
-        pyxel.cls(CI_GROUND)
+    for card in self.cards:
+      card.draw()
 
-        # タイルマップ
-        #pyxel.bltm(0, 0, 0, 0, 0, 192, 128, 0)
+    # プレイヤーを描画
+    self.player.draw()
 
-        # カメラ(セット)
-        #pyxel.camera(self.player.x - START_X, 0)
+    #pyxel.camera() # カメラ(リセット)
 
-
-
-        # トンネルを描画
-        for tunnel in self.tunnels:
-            tunnel.draw()
-
-        for card in self.cards:
-          card.draw()
-
-        # プレイヤーを描画
-        self.player.draw()
-
-        #pyxel.camera() # カメラ(リセット)
-
-        # メッセージ
-        if self.game_mode == MODE_TITLE:
+    # メッセージ
+    if self.game_mode == MODE_TITLE:
             msg = "SPACE TO PLAY"
             pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
-        elif self.game_mode == MODE_GAME_OVER:
+    elif self.game_mode == MODE_GAME_OVER:
             msg = "GAME over"
             pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
 
-        # スコアを描画
-        pyxel.text(10, 4,
+    # スコアを描画
+    pyxel.text(10, 4,
             "SCORE:{:04}".format(self.score), CI_MAINFONT)
 
-    def reset(self):
-        """ ステージを初期化 """
+  def reset(self):
+    """ ステージを初期化 """
 
-        # プレイヤー
-        self.player.x = START_X
-        self.player.y = START_Y
+    # プレイヤー
+    self.player.x = 0
+    self.player.y = 0
 
-        # トンネル
-        self.tunnels = []
+    self.set_card()
 
-        self.set_card()
-
-    def control(self):
+  def control(self):
       """ コントロール """
       if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
 
@@ -317,11 +292,11 @@ class Game:
         pyxel.play(3, 2)
 
 
-    def set_card(self):
+  def set_card(self):
       self.cards = []
       for i in range(13):
         for j in range(4):
-          card = Card(i * 10, 20 + 20 * j,
+          card = Card(i, 1 + j,
             (Card.SPADES, Card.HEARTS, Card.DIAMONDS, Card.CLUBS)[j],
             i + 1,
           )
@@ -329,7 +304,7 @@ class Game:
           self.cards.append(card)
 
       if True:
-        card = Card.joker(10, 100)
+        card = Card.joker(1, 4)
         self.cards.append(card)
 
 def main():
