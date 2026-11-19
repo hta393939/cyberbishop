@@ -250,15 +250,15 @@ class Game:
 
     # メッセージ
     if self.game_mode == MODE_TITLE:
-            msg = "SPACE TO PLAY"
-            pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
+      msg = "SPACE TO PLAY"
+      pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
     elif self.game_mode == MODE_GAME_OVER:
-            msg = "GAME over"
-            pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
+      msg = "GAME over"
+      pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
 
     # スコアを描画
     pyxel.text(10, 4,
-            "SCORE:{:04}".format(self.score), CI_MAINFONT)
+      "SCORE:{:04}".format(self.score), CI_MAINFONT)
 
   def reset(self):
     """ ステージを初期化 """
@@ -270,42 +270,42 @@ class Game:
     self.set_card()
 
   def control(self):
-      """ コントロール """
-      if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
+    """ コントロール """
+    if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
 
-      # Title -> Play
-      if self.game_mode == MODE_TITLE:
-        self.game_mode = MODE_PLAY
-        pyxel.play(3, 0)
-        return
+    # Title -> Play
+    if self.game_mode == MODE_TITLE:
+      self.game_mode = MODE_PLAY
+      pyxel.play(3, 0)
+      return
 
-      # Game Over -> Title
-      if self.game_mode == MODE_GAME_OVER:
-        self.game_mode = MODE_TITLE
+    # Game Over -> Title
+    if self.game_mode == MODE_GAME_OVER:
+      self.game_mode = MODE_TITLE
 
-        # Reset
-        self.reset()
-        return
+      # Reset
+      self.reset()
+      return
 
-      if self.game_mode == MODE_PLAY:
-        self.game_mode == MODE_GAME_OVER
-        pyxel.play(3, 2)
+    if self.game_mode == MODE_PLAY:
+      self.game_mode == MODE_GAME_OVER
+      pyxel.play(3, 2)
 
 
   def set_card(self):
-      self.cards = []
-      for i in range(13):
-        for j in range(4):
-          card = Card(i, 1 + j,
-            (Card.SPADES, Card.HEARTS, Card.DIAMONDS, Card.CLUBS)[j],
-            i + 1,
-          )
-          card.is_face = True if pyxel.rndi(0, 1) == 0 else False
-          self.cards.append(card)
-
-      if True:
-        card = Card.joker(1, 4)
+    self.cards = []
+    for i in range(13):
+      for j in range(4):
+        card = Card(i, 1 + j,
+          (Card.SPADES, Card.HEARTS, Card.DIAMONDS, Card.CLUBS)[j],
+          i + 1,
+        )
+        card.is_face = True if pyxel.rndi(0, 1) == 0 else False
         self.cards.append(card)
+
+    if True:
+      card = Card.joker(1, 4)
+      self.cards.append(card)
 
 def main():
     """ メイン処理 """

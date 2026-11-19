@@ -68,6 +68,9 @@ class InputManager:
 
     self.axes = (
       pyxel.GAMEPAD1_AXIS_LEFTX,
+      pyxel.GAMEPAD1_AXIS_LEFTY,
+      pyxel.GAMEPAD1_AXIS_RIGHTX,
+      pyxel.GAMEPAD1_AXIS_RIGHTY,
     )
 
     self.mod_mask = 7
@@ -76,6 +79,7 @@ class InputManager:
   def reset(self):
     self.counts = [0, 0, 0, 0, 0]
     self.fires = [False, False, False, False, False]
+    self.axess = [0, 0, 0, 0]
 
   def update(self):
     """fires から取得する"""
@@ -90,6 +94,11 @@ class InputManager:
         self.counts[i] = 0
     
       self.fires[i] = (self.counts[i] & self.mod_mask) == 1
+
+    # 4軸から取得する
+    for i, v in enumerate(self.axes):
+      self.axess[i] = pyxel.btnv(v)
+
 
 
 class BaseSprite:
