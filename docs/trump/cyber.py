@@ -4,9 +4,9 @@ import pyxel
 import math
 import random
 
-from pyxel.cube import Node, Camera, Shading, Vec3, Mat4
+from pyxel.cube import Node, Camera, Shading, Vec3, Mat4, Primitive
 
-W, H = 128, 128
+W, H = 256, 256
 
 START_X = 10
 START_Y = 100
@@ -20,6 +20,33 @@ CI_TR0 = 0
 MODE_TITLE = "title"
 MODE_PLAY = "play"
 MODE_GAME_OVER = "game_over"
+
+
+class LargePlane(Node):
+  def __init__(self, x = 0, y = 0, z = 0, width = 256, height = 256):
+    super().__init__()
+
+    self.pos = Vec3(x, y, z)
+    self.angle = 0
+    self.transform = Mat4.from_translation(self.pos)
+
+    self.tex = pyxel.Image(64, 64)
+    self.tex.cls(8)
+    self.tex.bltm(0, 0, 0, # 描画先とタイルインデックス
+      4 * 8 * 8, (3 * 8) * 8, # ピクセル単位
+      64, 64) # ピクセル単位
+    self.tex.text(10, 28, "HELLO 3D", 15)
+
+    self.plane = Primitive.plane(width, height)
+
+  def on_update(self):
+    self.angle += 0.03
+    rot = Mat4.from_euler(Vec3(0, self.angle, 0))
+    self.transform = Mat4.from_translation(self.pos) * rot
+
+  def on_draw(self):
+    self.prim(Mat4.IDENTITY, self.plane, self.tex)
+
 
 
 class InputManager:
@@ -223,12 +250,15 @@ class Game:
     self.root = Node()
     self.root.add_child(StaticCube())
 
+    self.root.add_child(LargePlane(0, 0, 0))
+
     shading = Shading(pyxel.colors)
     shading.direction = Vec3(0.4, -1, -0.5)
     self.root.shading = shading
 
     self.root.camera = Camera()
-    self.root.camera.clear_color = 0
+    self.root.camera.ortho_size = 128
+    self.root.camera.clear_color = None
     self.root.camera.transform = Mat4.look_at(
       Vec3(0.0, 50.0, 80.0), Vec3.ZERO
     )
@@ -237,75 +267,71 @@ class Game:
     pyxel.run(self.update, self.draw)
 
   def update(self):
-        """ 更新処理 """
+    """ 更新処理 """
 
-        # スコアを更新
-        self.score = int(self.player.x - START_X)
+    # スコアを更新
+    self.score = int(self.player.x - START_X)
 
-        self.input_manager.update()
+    self.input_manager.update()
 
-        # コントロール
-        self.control()
+    # コントロール
+    self.control()
 
-        # プレイ中判定
-        #if self.game_mode != MODE_PLAY: return
+    # プレイ中判定
+    #if self.game_mode != MODE_PLAY: return
 
-        # プレイヤーを更新
-        self.player.update(self.input_manager.fires)
+    # プレイヤーを更新
+    self.player.update(self.input_manager.fires)
 
-        # トンネルを更新
-        for tunnel in self.tunnels:
-            tunnel.update()
-            if(tunnel.intersects(self.player)):
-                self.game_mode = MODE_GAME_OVER
-                break
+    # トンネルを更新
+    for tunnel in self.tunnels:
+        tunnel.update()
+        if(tunnel.intersects(self.player)):
+            self.game_mode = MODE_GAME_OVER
+            break
 
-        for card in self.cards:
-          card.update()
+    for card in self.cards:
+      card.update()
 
-        self.root.update()
+    self.root.update()
 
-        # 落下判定
-        #if H < self.player.y: 
-        #    self.game_mode = MODE_GAME_OVER
+    # 落下判定
+    #if H < self.player.y: 
+    #    self.game_mode = MODE_GAME_OVER
 
   def draw(self):
-        """ 描画処理 """
-        pyxel.cls(CI_GROUND)
+    """ 描画処理 """
+    pyxel.cls(CI_GROUND)
 
-        self.root.draw(0, 0, pyxel.width, pyxel.height)
-        if True:
-          return
+    # 回転は??
+    #pyxel.camera(self.player.x - START_X, 0)
+    # タイルマップ
+    #pyxel.bltm(0, 0, 0, 0, 0, 192, 128, 0)
+    #pyxel.camera()
 
-        # 回転は??
-        pyxel.camera(self.player.x - START_X, 0)
+    self.root.draw(0, 0, pyxel.width, pyxel.height)
+    #if True:
+    #  return
 
-        # タイルマップ
-        #pyxel.bltm(0, 0, 0, 0, 0, 192, 128, 0)
+    #for card in self.cards:
+    #  card.draw()
 
-        # トンネルを描画
-        for tunnel in self.tunnels:
-            tunnel.draw()
+    # プレイヤーを描画
+    self.player.draw()
 
-        for card in self.cards:
-          card.draw()
+    pyxel.camera() # カメラ(リセット)
 
-        # プレイヤーを描画
-        self.player.draw()
+    # メッセージ
+    if self.game_mode == MODE_TITLE:
+        msg = "SPACE TO PLAY"
+        pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
+    elif self.game_mode == MODE_GAME_OVER:
+        msg = "GAME over"
+        pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
 
-        pyxel.camera() # カメラ(リセット)
-
-        # メッセージ
-        if self.game_mode == MODE_TITLE:
-            msg = "SPACE TO PLAY"
-            pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
-        elif self.game_mode == MODE_GAME_OVER:
-            msg = "GAME over"
-            pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
-
-        # スコアを描画
-        pyxel.text(10, 4,
-            "SCORE:{:04}".format(self.score), CI_MAINFONT)
+    # スコアを描画
+    pyxel.text(10, 4,
+        "SCORE:{:04}".format(self.score), CI_MAINFONT)
 
   def reset(self):
     """ ステージを初期化 """
