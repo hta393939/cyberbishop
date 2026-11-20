@@ -23,24 +23,27 @@ MODE_GAME_OVER = "game_over"
 
 
 class LargePlane(Node):
-  def __init__(self, x = 0, y = 0, z = 0, width = 256, height = 256):
+  def __init__(self, x = 0, y = 0, z = 0):
     super().__init__()
 
     self.pos = Vec3(x, y, z)
     self.angle = 0
     self.transform = Mat4.from_translation(self.pos)
 
-    self.tex = pyxel.Image(64, 64)
-    self.tex.cls(8)
+    rate = 8
+    size = 8 * 8 * rate
+    self.tex = pyxel.Image(size, size)
+    #self.tex.cls(8)
     self.tex.bltm(0, 0, 0, # 描画先とタイルインデックス
       4 * 8 * 8, (3 * 8) * 8, # ピクセル単位
-      64, 64) # ピクセル単位
-    self.tex.text(10, 28, "HELLO 3D", 15)
+      size, size) # ピクセル単位
+    #self.tex.text(10, 28, "HELLO 3D", 15)
 
-    self.plane = Primitive.plane(width, height)
+    self.plane = Primitive.plane(size, size)
 
   def on_update(self):
     self.angle += 0.03
+    self.angle = 180
     rot = Mat4.from_euler(Vec3(0, self.angle, 0))
     self.transform = Mat4.from_translation(self.pos) * rot
 
@@ -231,7 +234,7 @@ class TunnelSprite(BaseSprite):
 
 class StaticCube(Node):
   def on_draw(self):
-    self.box(Mat4.IDENTITY, Vec3(30, 30, 30), 11)
+    self.box(Mat4.IDENTITY, Vec3(8, 8, 8), 11)
 
 # Game
 class Game:
@@ -269,7 +272,7 @@ class Game:
     self.root.camera.ortho_size = 128
     self.root.camera.clear_color = None
     self.root.camera.transform = Mat4.look_at(
-      Vec3(0.0, 50.0, 80.0), Vec3.ZERO
+      Vec3(0.0, 0.0, 32.0), Vec3.ZERO
     )
 
 
