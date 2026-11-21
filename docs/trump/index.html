@@ -18,17 +18,31 @@
   script="
 import pyxel
 
+count = 7
+
+def update():
+  global count
+  if pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT):
+    count += 1
+    # pre, tr, style(ある意味チャンネル数), seed
+    pyxel.gen_bgm(count % 8, 0, 1, 2, play=True)
+
+def draw():
+  global count
+  pyxel.cls(15)
+  pyxel.line(pyxel.frame_count % 100, 20, 180, 130, 7)
+  pyxel.text(16, 16, f'{count % 8} {pyxel.frame_count}', 8)
+
 pyxel.init(200, 150)
-pyxel.cls(15)
-pyxel.line(20, 20, 180, 130, 7)
-pyxel.show()
+pyxel.run(update, draw)
 "
 ></pyxel-run>
 
-    <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel/wasm/pyxel.js"></script>
 <!--
-    <script src="https://kitao.dev/pyxel/3.0.3/pyxel.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/kitao/pyxel/wasm/pyxel.js"></script>
   -->
+
+    <script src="https://kitao.dev/pyxel/3.0.3/pyxel.js"></script>
   </body>
 </html>
 
