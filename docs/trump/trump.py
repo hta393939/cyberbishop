@@ -13,6 +13,8 @@ CI_MAINFONT = 7
 # 透明キーインデックス
 CI_TR0 = 0
 
+CH_SE = 3
+
 MODE_TITLE = "title"
 MODE_PLAY = "play"
 MODE_GAME_OVER = "game_over"
@@ -192,6 +194,7 @@ class Game:
 
     # スコアを初期化
     self.score = 0
+    self.gain = 0.04
 
     # ゲームモード
     self.game_mode = MODE_TITLE
@@ -210,8 +213,8 @@ class Game:
     pyxel.run(self.update, self.draw)
 
     # my_resource.pyxpal 取りに行ってるんだが??
-    #bgm_text = pyxel.gen_bgm(0, 0, 3, play=True)
-    #print(bgm_text)
+
+
 
   def update(self):
     """ 更新処理 """
@@ -250,8 +253,13 @@ class Game:
 
     # メッセージ
     if self.game_mode == MODE_TITLE:
-      msg = "SPACE TO PLAY"
+      msg = "CLICK TO PLAY"
       pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
+      pyxel.gen_bgm(3, 0, 1, 1234, play=True)
+      pyxel.channels[0].gain = self.gain
+      pyxel.channels[1].gain = self.gain
+      pyxel.channels[2].gain = self.gain
+
     elif self.game_mode == MODE_GAME_OVER:
       msg = "GAME over"
       pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
@@ -276,7 +284,7 @@ class Game:
     # Title -> Play
     if self.game_mode == MODE_TITLE:
       self.game_mode = MODE_PLAY
-      pyxel.play(3, 0)
+      pyxel.play(CH_SE, 3)
       return
 
     # Game Over -> Title
@@ -289,7 +297,7 @@ class Game:
 
     if self.game_mode == MODE_PLAY:
       self.game_mode == MODE_GAME_OVER
-      pyxel.play(3, 2)
+      pyxel.play(CH_SE, 2)
 
 
   def set_card(self):
