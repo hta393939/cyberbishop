@@ -28,9 +28,7 @@ class InputManager:
     self.buts = (pyxel.GAMEPAD1_BUTTON_A,
       pyxel.GAMEPAD1_BUTTON_B,
       pyxel.GAMEPAD1_BUTTON_X,
-      pyxel.GAMEPAD1_BUTTON_Y,
-      pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER,
-      pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)
+      pyxel.GAMEPAD1_BUTTON_Y)
 
     self.keyss = (self.ups, self.rights, self.downs, self.lefts,
       self.buts)
@@ -38,8 +36,6 @@ class InputManager:
     self.axes = (
       pyxel.GAMEPAD1_AXIS_LEFTX,
       pyxel.GAMEPAD1_AXIS_LEFTY,
-      pyxel.GAMEPAD1_AXIS_RIGHTX,
-      pyxel.GAMEPAD1_AXIS_RIGHTY,
     )
 
     self.mod_mask = 7
@@ -212,6 +208,10 @@ class Game:
     pyxel.init(W, H, title="Hello, Pyxel!!")
     pyxel.load("my_resource.pyxres")
     pyxel.run(self.update, self.draw)
+
+    # my_resource.pyxpal 取りに行ってるんだが??
+    #bgm_text = pyxel.gen_bgm(0, 0, 3, play=True)
+    #print(bgm_text)
 
   def update(self):
     """ 更新処理 """
