@@ -6,23 +6,23 @@
     <link rel="stylesheet" href="./index.css" />
   </head>
   <body>
-    カスタムの場合 in code 3.0.1
+    カスタムの場合 in code 3.0.3
 
     <div id="pyxel-screen"></div>
 
-    <pyxel-run
+    <pyxel-run gamepad="enabled"
   script="
 import pyxel
 
 pyxel.init(200, 150)
-pyxel.cls(8)
+pyxel.cls(15)
 pyxel.line(20, 20, 180, 130, 7)
 pyxel.show()
 "
 ></pyxel-run>
 
 
-    <script src="https://kitao.dev/pyxel/3.0.1/pyxel.js"></script>
+    <script src="https://kitao.dev/pyxel/3.0.3/pyxel.js"></script>
   </body>
 </html>
 
