@@ -15,6 +15,14 @@ CI_TR0 = 0
 
 CH_SE = 3
 
+SE_SUC = 0
+SE_BEEP = 1
+SE_ON = 2
+SE_MOVE = 3
+SE_MENU = 4
+SE_CANCEL = 5
+SE_WALK = 6
+
 MODE_TITLE = "title"
 MODE_PLAY = "play"
 MODE_GAME_OVER = "game_over"
@@ -27,13 +35,17 @@ class InputManager:
     self.ups = (pyxel.KEY_W, pyxel.KEY_UP, pyxel.GAMEPAD1_BUTTON_DPAD_UP)
     self.downs = (pyxel.KEY_S, pyxel.KEY_DOWN, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
 
-    self.buts = (pyxel.GAMEPAD1_BUTTON_A,
+    self.abuts = (
+      pyxel.KEY_Z,
+      pyxel.GAMEPAD1_BUTTON_A,
+    )
+    self.bbuts = (
+      pyxel.KEY_X,
       pyxel.GAMEPAD1_BUTTON_B,
-      pyxel.GAMEPAD1_BUTTON_X,
-      pyxel.GAMEPAD1_BUTTON_Y)
+    )
 
     self.keyss = (self.ups, self.rights, self.downs, self.lefts,
-      self.buts)
+      self.abuts, self.bbuts)
 
     self.axes = (
       pyxel.GAMEPAD1_AXIS_LEFTX,
@@ -44,8 +56,8 @@ class InputManager:
     self.reset()
 
   def reset(self):
-    self.counts = [0, 0, 0, 0, 0]
-    self.fires = [False, False, False, False, False]
+    self.counts = [0, 0, 0, 0, 0, 0]
+    self.fires = [False, False, False, False, False, False]
 
   def update(self):
     """fires から取得する"""
@@ -160,12 +172,17 @@ class PlayerSprite(BaseSprite):
     """ 更新処理 """
     super().update()
 
+    if fires[4]:
+      pyxel.play(CH_SE, SE_ON)
+    if fires[5]:
+      pyxel.play(CH_SE, SE_CANCEL)
+
     dx = 0
     dy = 0
 
     if fires[3]:
       dx = -1
-    if fires[1] or fires[4]:
+    if fires[1]:
       dx = 1
     if fires[0]:
       dy = -1
@@ -174,7 +191,23 @@ class PlayerSprite(BaseSprite):
 
     self.bx += dx
     self.by += dy
+    if self.bx < 0:
+      self.bx = 0
+      dx = 0
+    elif self.bx > 13:
+      self.bx = 0
+      dx = 0
+    if self.by < 0:
+      self.by = 0
+      dy = 0
+    elif self.by > 4:
+      self.by = 4
+      dy = 0
+
+
     result = self.calc()
+    if dx != 0 or dy != 0:
+      pyxel.play(CH_SE, SE_MOVE)
 
 
   def draw(self):
