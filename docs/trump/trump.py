@@ -228,6 +228,7 @@ class Game:
     # スコアを初期化
     self.score = 0
     self.gain = 0.04
+    self.first_gen = True
 
     # ゲームモード
     self.game_mode = MODE_TITLE
@@ -288,10 +289,13 @@ class Game:
     if self.game_mode == MODE_TITLE:
       msg = "CLICK TO PLAY"
       pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
-      pyxel.gen_bgm(3, 0, 1, 1234, play=True)
-      pyxel.channels[0].gain = self.gain
-      pyxel.channels[1].gain = self.gain
-      pyxel.channels[2].gain = self.gain
+
+      if self.first_gen:
+        self.first_gen = False
+        pyxel.gen_bgm(3, 0, 1, 1234, play=True)
+        pyxel.channels[0].gain = self.gain
+        pyxel.channels[1].gain = self.gain
+        pyxel.channels[2].gain = self.gain
 
     elif self.game_mode == MODE_GAME_OVER:
       msg = "GAME over"
