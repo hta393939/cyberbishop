@@ -333,10 +333,11 @@ class Game:
         if sel:
           if sel.is_face:
             sel.is_face = False
+            pyxel.play(CH_SE, SE_CANCEL)
           else:
             sel.is_face = True
+            pyxel.play(CH_SE, SE_ON)
 
-          pyxel.play(CH_SE, SE_ON)
         else:
           pass
 
