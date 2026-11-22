@@ -242,8 +242,8 @@ class Phase:
     # True だとまだピックされていない
     # A: 0, 2: 1, ... 12: K
     self.cards = [[True] * 4] * 13
-    self.hands = [[{suit: -1, number: -1}] * 5] * 10
-    self.anys = [{suit: -1, number: -1}] * 2
+    self.hands = [[{"suit": -1, "number": -1}] * 5] * 10
+    self.anys = [{"suit": -1, "number": -1}] * 2
 
   def pick(self, suit, number):
     """14を入れたら1として扱いインデックスは0"""
@@ -402,6 +402,7 @@ class Game:
       sel = self.find_by_pos(self.player.bx, self.player.by)
       abut = self.input_manager.fires[4]
       bbut = self.input_manager.fires[5]
+      cbut = self.input_manager.fires[6]
       if abut:
         if sel:
           if not sel.is_face:
@@ -413,6 +414,8 @@ class Game:
       #if bbut:
       # 閉じる
       #pyxel.play(CH_SE, SE_CANCEL)
+      if cbut:
+        self.set_card_by_phase()
 
 
   def add_sel(self, add: Card):
@@ -518,15 +521,15 @@ class Game:
 
     # 9, ロイヤル
     suit = pyxel.rndi(0, 3)
-    for i, number in (14, 13, 12, 11, 10):
+    for i, number in enumerate((14, 13, 12, 11, 10)):
       cur.pick(suit, number)
-      cur.hands[9][i] = {suit: suit, number: number}
+      cur.hands[9][i] = {"suit": suit, "number": number}
 
     # 7, フォーの4つ
     number = pyxel.rndi(2, 9)
     for i, s in (0, 1, 2, 3):
       cur.pick(s, number)
-      cur.hands[7][i] = {suit: s, number: number}
+      cur.hands[7][i] = {"suit": s, "number": number}
 
     # 8, ストレートフラッシュ
     for _ in range(10):
@@ -540,7 +543,7 @@ class Game:
 
       for i in range(5):
         cur.pick(suit, number - i)
-        cur.hands[8][i] = {suit: suit, number: number - i}
+        cur.hands[8][i] = {"suit": suit, "number": number - i}
 
 
     # 6, フルハウスの3, 3, スリーカードの3
@@ -564,7 +567,7 @@ class Game:
 
         for k, v in pseq:
           cur.pick(v, index)
-          cur.hands[h][k] = {suit: v, number: index}
+          cur.hands[h][k] = {"suit": v, "number": index}
 
 
     # ストレート
@@ -587,7 +590,7 @@ class Game:
           s = sseq[j]
           n = seq[i]
           if cur.pick(s, n) and s != flash_suit and n != straight_number:
-            pseq.append({suit: sseq[j], number: seq[i]})
+            pseq.append({"suit": sseq[j], "number": seq[i]})
             break
         if len(pseq) == 4 and flash_suit == -2:
           straight_suit = -1
@@ -633,7 +636,7 @@ class Game:
     # フルハウスの残りのペア(2) スリーの残り(2)
 
     # フォーの残りとオープン(3)
-
+    print(cur)
     pass
 
 
