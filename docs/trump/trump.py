@@ -88,7 +88,7 @@ class BaseSprite:
   def calc(self):
     """ブロック番号から位置へ"""
     self.x = self.bx * 10
-    self.y = self.by * 20
+    self.y = 20 + self.by * 20
 
   def update(self):
     """ 更新処理 """
@@ -194,8 +194,8 @@ class PlayerSprite(BaseSprite):
     if self.bx < 0:
       self.bx = 0
       dx = 0
-    elif self.bx > 13:
-      self.bx = 0
+    elif self.bx > 12:
+      self.bx = 12
       dx = 0
     if self.by < 0:
       self.by = 0
@@ -308,9 +308,9 @@ class Game:
   def reset(self):
     """ ステージを初期化 """
 
-    # プレイヤー
+    # カーソル
     self.player.x = 0
-    self.player.y = 0
+    self.player.y = 20 + 4 * 20
 
     self.set_card()
 
@@ -341,7 +341,7 @@ class Game:
     self.cards = []
     for i in range(13):
       for j in range(4):
-        card = Card(i, 1 + j,
+        card = Card(i, j,
           (Card.SPADES, Card.HEARTS, Card.DIAMONDS, Card.CLUBS)[j],
           i + 1,
         )
