@@ -43,9 +43,13 @@ class InputManager:
       pyxel.KEY_X,
       pyxel.GAMEPAD1_BUTTON_B,
     )
+    self.cbuts = (
+      pyxel.KEY_C,
+      pyxel.GAMEPAD1_BUTTON_X,
+    )
 
-    self.keyss = (self.ups, self.rights, self.downs, self.lefts,
-      self.abuts, self.bbuts)
+    self.keyss = (self.ups, self.rights, self.downs, self.lefts)
+    self.triggerss = (self.abuts, self.bbuts, self.cbuts)
 
     self.axes = (
       pyxel.GAMEPAD1_AXIS_LEFTX,
@@ -56,8 +60,8 @@ class InputManager:
     self.reset()
 
   def reset(self):
-    self.counts = [0, 0, 0, 0, 0, 0]
-    self.fires = [False, False, False, False, False, False]
+    self.counts = [0] * 7
+    self.fires = [False] * 7
 
   def update(self):
     """fires から取得する"""
@@ -71,6 +75,13 @@ class InputManager:
         self.counts[i] = 0
     
       self.fires[i] = (self.counts[i] & self.mod_mask) == 1
+
+    for (i, triggers) in enumerate(self.triggerss):
+      trig = False
+      for k in triggers:
+        trig = trig or pyxel.btnp(k, 15, 4)
+      self.fires[i + 4] = trig
+    
 
 
 class BaseSprite:
@@ -172,11 +183,7 @@ class PlayerSprite(BaseSprite):
     """ 更新処理 """
     super().update()
 
-    if fires[4]:
-      pyxel.play(CH_SE, SE_ON)
-    if fires[5]:
-      pyxel.play(CH_SE, SE_CANCEL)
-
+    # 移動
     dx = 0
     dy = 0
 
@@ -203,7 +210,6 @@ class PlayerSprite(BaseSprite):
     elif self.by > 4:
       self.by = 4
       dy = 0
-
 
     result = self.calc()
     if dx != 0 or dy != 0:
@@ -255,14 +261,16 @@ class Game:
 
     self.input_manager.update()
 
+    # プレイヤーを更新
+    self.player.update(self.input_manager.fires)
+
     # コントロール
     self.control()
 
     # プレイ中判定
     if self.game_mode != MODE_PLAY: return
 
-    # プレイヤーを更新
-    self.player.update(self.input_manager.fires)
+
 
     for card in self.cards:
       card.update()
@@ -316,6 +324,26 @@ class Game:
 
   def control(self):
     """ コントロール """
+
+    if self.game_mode == MODE_PLAY:
+      sel = self.find_by_pos(self.player.bx, self.player.by)
+      abut = self.input_manager.fires[4]
+      bbut = self.input_manager.fires[5]
+      if abut:
+        if sel:
+          if sel.is_face:
+            sel.is_face = False
+          else:
+            sel.is_face = True
+
+          pyxel.play(CH_SE, SE_ON)
+        else:
+          pass
+
+      if bbut:
+        pyxel.play(CH_SE, SE_CANCEL)
+
+
     if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
 
     # Title -> Play
@@ -351,6 +379,14 @@ class Game:
     if True:
       card = Card.joker(1, 4)
       self.cards.append(card)
+
+  def find_by_pos(self, bx, by):
+    '''ブロック座標でカードを探す'''
+    ret = None
+    for i, v in enumerate(self.cards):
+      if v.bx == bx and v.by == by:
+        ret = v
+    return ret
 
 def main():
     """ メイン処理 """
