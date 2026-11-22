@@ -2,6 +2,7 @@
 
 import pyxel
 import math
+import copy
 import random
 
 W, H = 128, 128
@@ -95,6 +96,7 @@ class BaseSprite:
     self.calc()
     self.w = w
     self.h = h
+    self.visible = True
 
   def calc(self):
     """ブロック番号から位置へ"""
@@ -146,7 +148,7 @@ class Card(BaseSprite):
     self.number = number
     # 描画用参照
     self.draw_number = number
-    if number == 1:
+    if number == 1 or number == 14:
       self.draw_number = Card.ACE
     elif number >= 10 and number <= 13:
       self.draw_number = number + Card.TEN_OFFSET - 10
@@ -163,6 +165,9 @@ class Card(BaseSprite):
     super().update()
 
   def draw(self):
+    if not self.visible:
+      return
+
     if self.is_face:
       pyxel.blt(self.x, self.y, 1,
         self.suit * 8, 3 * 8, self.w, self.h)
@@ -230,6 +235,38 @@ class PlayerSprite(BaseSprite):
       start_x + 8, 24, self.w, self.h, CI_TR0)
       # Debug
       #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
+
+
+class Phase:
+  def __init__(self):
+    # True だとまだピックされていない
+    # A: 0, 2: 1, ... 12: K
+    self.cards = [[True] * 4] * 13
+    self.hands = [[{suit: -1, number: -1}] * 5] * 10
+    self.anys = [{suit: -1, number: -1}] * 2
+
+  def pick(self, suit, number):
+    """14を入れたら1として扱いインデックスは0"""
+    self.cards[suit][(1 if number == 14 else number) - 1] = False
+
+  def check(self, suit, number):
+    """残っていたら True"""
+    return self.cards[suit][(1 if number == 14 else number) - 1]
+
+  def count_suit(self):
+    ret = [0, 0, 0, 0]
+    for i in range(4):
+      for j in range(13):
+        ret[i] += 1 if self.cards[i][j] else 0
+    return ret
+
+  def clone(self):
+    ret = Phase()
+    ret.cards = self.cards.deepcopy()
+    ret.hands = self.hands.deepcopy()
+    ret.anys = self.anys.deepcopy()
+    return ret
+
 
 # Game
 class Game:
@@ -467,6 +504,138 @@ class Game:
       if v.bx == bx and v.by == by:
         ret = v
     return ret
+
+
+
+  def shuffle(self, target):
+    # 後で seed 配下にするかも
+    random.shuffle(target)
+
+  def set_card_by_phase(self):
+    """ラップアラウンド無し"""
+
+    cur = Phase()
+
+    # 9, ロイヤル
+    suit = pyxel.rndi(0, 3)
+    for i, number in (14, 13, 12, 11, 10):
+      cur.pick(suit, number)
+      cur.hands[9][i] = {suit: suit, number: number}
+
+    # 7, フォーの4つ
+    number = pyxel.rndi(2, 9)
+    for i, s in (0, 1, 2, 3):
+      cur.pick(s, number)
+      cur.hands[7][i] = {suit: s, number: number}
+
+    # 8, ストレートフラッシュ
+    for _ in range(10):
+      suit = pyxel.rndi(0, 3)
+      number = pyxel.rndi(5, 13)
+      count = 0
+      for i in range(5):
+        count += 1 if cur.check(suit, number - i) else 0
+      if count != 5:
+        continue
+
+      for i in range(5):
+        cur.pick(suit, number - i)
+        cur.hands[8][i] = {suit: suit, number: number - i}
+
+
+    # 6, フルハウスの3, 3, スリーカードの3
+    seq = list(range(13))
+    self.shuffle(seq)
+    index = 0
+    for h in [6, 3]:
+      for _ in range(13):
+        sseq = [0, 1, 2, 3]
+        self.shuffle(sseq)
+        # pick 順番
+        pseq = []
+        for j in range(4):
+          if cur.pick(sseq[j], seq[index]):
+            pseq.append(sseq[j])
+        if len(pseq) < 3:
+          index += 1
+          continue
+        # 3枚以上選択した場合
+        pseq = sorted(pseq[:2])
+
+        for k, v in pseq:
+          cur.pick(v, index)
+          cur.hands[h][k] = {suit: v, number: index}
+
+
+    # ストレート
+    for _ in range(10):
+      number = pyxel.rndi(5, 14)
+      # 未実装
+
+    # ハイカード(1-1-1-1-1)
+    for _ in range(10):
+      seq = range(13)
+      self.shuffle(seq)
+      index = 0
+      flash_suit = -2
+      straight_number = -2
+      pseq = []
+      for i in range(13):
+        sseq = [0, 1, 2, 3]
+        self.shuffle(sseq)
+        for j in range(4):
+          s = sseq[j]
+          n = seq[i]
+          if cur.pick(s, n) and s != flash_suit and n != straight_number:
+            pseq.append({suit: sseq[j], number: seq[i]})
+            break
+        if len(pseq) == 4 and flash_suit == -2:
+          straight_suit = -1
+          count = 0
+          for k in range(4):
+            count += 1 if pseq[k].suit == pseq[0].suit else 0
+          flash_suit = pseq[0].suit if count == 4 else -1
+
+          # ストレート回避 未実装
+
+      # 4枚までピックして最後はストレートとフラッシュ回避にした方が楽かも
+
+      if len(pseq) < 5:
+        continue
+
+
+    # フラッシュ(5)
+    sseq = [0, 1, 2, 3]
+    self.shuffle(sseq)
+    for v in sseq:
+      seq = range(13)
+      self.shuffle(seq)
+
+      pseq = []
+      for n in seq:
+        if cur.check(v, n):
+          pseq.append(n)
+
+      if len(pseq) < 5:
+        continue
+
+      # 5個以上ある場合
+      # フラッシュかぶりチェック
+
+
+    # ツーペア(2-2-1)
+    seq = range(13)
+    self.shuffle(seq)
+    for i in range(2):
+      pass
+
+    # ワンペア(1-3)
+    # フルハウスの残りのペア(2) スリーの残り(2)
+
+    # フォーの残りとオープン(3)
+
+    pass
+
 
 def main():
     """ メイン処理 """
