@@ -138,8 +138,13 @@ class Card(BaseSprite):
     self.by = by
     self.calc()
 
+    # ペア済みだと True
+    self.paired = False
+
     self.suit = suit
+    # 判定用数値
     self.number = number
+    # 描画用参照
     self.draw_number = number
     if number == 1:
       self.draw_number = Card.ACE
@@ -232,9 +237,9 @@ class Game:
     """ コンストラクタ """
 
     # スコアを初期化
-    self.score = 0
     self.gain = 0.04
     self.first_gen = True
+
 
     # ゲームモード
     self.game_mode = MODE_TITLE
@@ -316,6 +321,9 @@ class Game:
   def reset(self):
     """ ステージを初期化 """
 
+    self.score = 0
+    self.fail_count = 0
+
     # カーソル
     self.player.x = 0
     self.player.y = 20 + 4 * 20
@@ -326,23 +334,7 @@ class Game:
     """ コントロール """
 
     if self.game_mode == MODE_PLAY:
-      sel = self.find_by_pos(self.player.bx, self.player.by)
-      abut = self.input_manager.fires[4]
-      bbut = self.input_manager.fires[5]
-      if abut:
-        if sel:
-          if sel.is_face:
-            sel.is_face = False
-            pyxel.play(CH_SE, SE_CANCEL)
-          else:
-            sel.is_face = True
-            pyxel.play(CH_SE, SE_ON)
-
-        else:
-          pass
-
-      if bbut:
-        pyxel.play(CH_SE, SE_CANCEL)
+      self.play_control()
 
 
     if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
@@ -361,12 +353,88 @@ class Game:
       self.reset()
       return
 
-    if self.game_mode == MODE_PLAY:
-      self.game_mode == MODE_GAME_OVER
-      pyxel.play(CH_SE, 2)
+
+  def play_control(self):
+    self.fail_count -= 1
+    if self.fail_count == 0:
+      for v in self.selected:
+        v.is_face = False
+      self.selected = []
+
+    if self.fail_count <= 0:
+      sel = self.find_by_pos(self.player.bx, self.player.by)
+      abut = self.input_manager.fires[4]
+      bbut = self.input_manager.fires[5]
+      if abut:
+        if sel:
+          if not sel.is_face:
+            self.add_sel(sel)
+
+        else:
+          pass
+
+      #if bbut:
+      # 閉じる
+      #pyxel.play(CH_SE, SE_CANCEL)
+
+
+  def add_sel(self, add: Card):
+    """カード選択を追加する"""
+    if not add:
+      return
+
+    if add.paired or add.is_face:
+      pyxel.play(CH_SE, SE_CANCEL)
+      return
+
+    add.is_face = True
+    self.selected.append(add)
+    if len(self.selected) == 1:
+      pyxel.play(CH_SE, SE_ON)
+      return
+
+    # 通常チェック(任意ジョーカー無し)
+    sels = [self.selected[0].number, self.selected[1].number]
+    ok = False
+    if sels[0] == sels[1]:
+      ok = True
+    else:
+      # オープン救済
+      for i, v in enumerate(self.opened):
+        if v.paired:
+          continue
+
+        if sels[0] != v.number and sels[1] != v.number:
+          continue
+
+        ok = True
+        # 非マッチを閉じる
+        index = 0 if sels[0] == v.number else 1
+        unmatch = 1 - index
+
+        self.selected[unmatch].is_face = False
+
+        self.selected[unmatch] = v
+
+
+    if ok:
+      self.selected[0].paired = True
+      self.selected[1].paired = True
+      self.selected = []
+      pyxel.play(CH_SE, SE_SUC)
+      self.score += 100
+    else:
+      self.fail_count = 45
+      pyxel.play(CH_SE, SE_BEEP)
+      self.score -= 10
+      if self.score < 0:
+        self.score = 0
+        self.game_mode = MODE_GAME_OVER
 
 
   def set_card(self):
+    self.selected = []
+    self.opened = []
     self.cards = []
     for i in range(13):
       for j in range(4):
@@ -375,11 +443,22 @@ class Game:
           i + 1,
         )
         card.is_face = True if pyxel.rndi(0, 1) == 0 else False
+
+        n = len(self.opened)
+        if n < 2:
+          card.bx = 10 + n
+          card.by = -1
+          #card.by = 4
+          card.calc()
+          self.opened.append(card)
+
         self.cards.append(card)
 
-    if True:
+    if False:
       card = Card.joker(1, 4)
       self.cards.append(card)
+
+
 
   def find_by_pos(self, bx, by):
     '''ブロック座標でカードを探す'''
