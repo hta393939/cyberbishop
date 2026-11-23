@@ -475,13 +475,10 @@ class Game:
       bbut = self.input_manager.fires[5]
       cbut = self.input_manager.fires[6]
       if abut:
-        #if sel:
         self.add_sel(sel)
 
-      if bbut:
-        self.reset()
       if cbut:
-        self.set_card_by_phase()
+        self.reset()
 
 
   def add_sel(self, add: Card):
