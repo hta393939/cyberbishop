@@ -413,12 +413,15 @@ class Game:
     # スコアを描画
     pyxel.text(10, 4,
       "SCORE:{:04}".format(self.score), CI_MAINFONT)
+    pyxel.text(60, 4,
+      f'MISS:{self.miss}', CI_MAINFONT)
 
   def reset(self):
     """ ステージを初期化 """
     global GAME_GENRE, GAME_NAME
 
     self.score = 0
+    self.miss = 0
     self.fail_count = 0
 
     # カーソル
@@ -531,6 +534,7 @@ class Game:
       pyxel.play(CH_SE, SE_SUC)
       self.score += 100
     else:
+      self.miss += 1
       self.fail_count = 45
       pyxel.play(CH_SE, SE_BEEP)
       self.score -= 10
