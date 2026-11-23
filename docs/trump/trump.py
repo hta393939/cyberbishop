@@ -156,13 +156,21 @@ class Card(BaseSprite):
     elif number >= 10 and number <= 13:
       self.draw_number = number + Card.TEN_OFFSET - 10
 
-
     self.is_face = True
 
   @staticmethod
   def joker(x, y):
     card = Card(x, y, Card.JOKER_SUIT, Card.JOKER_NUMBER)
     return card
+
+  def num_equal(self, b: Card) -> bool:
+    if self.number == b.number:
+      return True
+    if self.number == 14 and b.number == 1:
+      return True
+    if self.number == 1 and b.number == 14:
+      return True
+    return False
 
   def update(self):
     super().update()
@@ -301,6 +309,15 @@ class Phase:
     for i in range(4):
       for j in range(13):
         ret[i] += 1 if self.rests[i][j] else 0
+    return ret
+
+  def count_number(self):
+    ret = [0] * 14
+    for n in range(13):
+      for s in range(4):
+        ret[n] += 1 if self.rests[s][n] else 0
+    # ace のコピー
+    ret[13] = ret[0]
     return ret
 
   def clone(self):
@@ -462,7 +479,7 @@ class Game:
         self.add_sel(sel)
 
       if bbut:
-        self_reset()
+        self.reset()
       if cbut:
         self.set_card_by_phase()
 
@@ -490,9 +507,9 @@ class Game:
 
     self.keep.visible = False
     # 通常チェック(任意ジョーカー無し)
-    sels = [self.selected[0].number % 13, self.selected[1].number % 13]
+    sels = [self.selected[0], self.selected[1]]
     ok = False
-    if sels[0] == sels[1]:
+    if sels[0].num_equal(sels[1]):
       ok = True
 
       self.selected[0].paired = True
@@ -504,13 +521,12 @@ class Game:
         if v.paired:
           continue
 
-        n_mod = v.number % 13
-        if sels[0] != n_mod and sels[1] != n_mod:
+        if (not sels[0].num_equal(v)) and (not sels[1].num_equal(v)):
           continue
 
         ok = True
         # 非マッチは時間で閉じる
-        index = 0 if sels[0] == n_mod else 1
+        index = 0 if sels[0].num_equal(v) else 1
         unmatch = 1 - index
 
         self.covers[index].visible = False
@@ -520,9 +536,7 @@ class Game:
 
         self.selected.pop(index)
         self.fail_count = 45
-
         break
-
 
     if ok:
       pyxel.play(CH_SE, SE_SUC)
@@ -651,41 +665,76 @@ class Game:
 
 
     # ストレート
+    nums = cur.count_number()
     seq = list(range(5 - 1, 15 - 1))
     self.shuffle(seq)
+    st_ok = False
     for start_n in seq:
+      sub = []
+      exist_zero = False
+      for j in range(5):
+        num = nums[start_n - j]
+        if num == 0:
+          exist_zero = True
+          break
+        sub.append(num)
+      if exist_zero:
+        continue
+
+      num_sum = sum(sub)
+
       pseq = []
       flash_suit = -11
       for j in range(5):
+        n = start_n - j
         sseq = [0, 1, 2, 3]
         self.shuffle(sseq)
-        p = None
         for s in sseq:
           n = start_n - j
-          if cur.check(s, n) and s != flash_suit:
-            p = {"suit": s, "number": n}
+          if cur.check(s, n):
+            pseq.append({"suit": s, "number": n})
+            if flash_suit == -11:
+              flash_suit = s
+            elif flash_suit != s:
+              flash_suit = -9
             break
-        if not p:
-          break
-        pseq.append(p)
-        if j == 3:
-          count = 0
-          for k in range(4):
-            count += 1 if pseq[k]["suit"] == pseq[0]["suit"] else 0
-          flash_suit = pseq[0]["suit"] if count == 4 else -9
 
-      if len(pseq) < 5:
+      if num_sum == 5 and flash_suit >= 0:
         continue
+
+      if flash_suit >= 0:
+        # 入れ替える
+        indices = [0, 1, 2, 3, 4]
+        self.shuffle(indices)
+        for i, index in enumerate(indices):
+          if sub[index] < 2:
+            continue
+          target_n = start_n - index
+          # 現在と違うスートに変更
+          sseq = [0, 1, 2, 3]
+          self.shuffle(sseq)
+          for new_s in sseq:
+            if new_s == pseq[index]["suit"]:
+              continue
+            if cur.check(new_s, target_n):
+              pseq[index]["suit"] = new_s
+              break
+          break
 
       for i, v in enumerate(pseq):
         s = v["suit"]
         n = v["number"]
         cur.pick(s, n)
         cur.hands[4][i] = {"suit": s, "number": n}
+      st_ok = True
       break
+
+    print(f'straight, {st_ok}')
 
 
     # 0: ハイカード(1-1-1-1-1)
+    nums = cur.count_number()
+    high_ok = False
     for _ in range(10):
       seq = list(range(13))
       self.shuffle(seq)
@@ -727,11 +776,13 @@ class Game:
         n = v["number"]
         cur.pick(s, n)
         cur.hands[0][i] = {"suit": s, "number": n}
+      high_ok = True
       break
 
 
-    print(f'rest, {cur.rest_num}, {cur}')
+    print(f'high_ok, {high_ok}, rest, {cur.rest_num}, {cur}')
     # フラッシュ(5)
+    flash_ok = False
     sseq = [0, 1, 2, 3]
     self.shuffle(sseq)
     for s in sseq:
@@ -775,8 +826,10 @@ class Game:
       for i, n in enumerate(pseq):
         cur.pick(s, n)
         cur.hands[5][i] = {"suit": s, "number": n}
+      flash_ok = True
       break
 
+    print(f'flash_ok, {flash_ok}')
 
     # ツーペア(2-2-1)
     seq = list(range(13))
@@ -826,6 +879,7 @@ class Game:
 
 
     # ワンペア(1-3)
+    one_ok = False
     for _ in range(10):
       seq = list(range(13))
       self.shuffle(seq)
@@ -877,8 +931,10 @@ class Game:
         n = v["number"]
         cur.pick(s, n)
         cur.hands[1][i] = {"suit": s, "number": n}
+      one_ok = True
       break
 
+    print(f'one_ok, {one_ok}')
 
     # スリーの残り(2)
     three_n = cur.hands[3][0]["number"]
@@ -979,7 +1035,7 @@ class Game:
 
       self.opened.append(card)
 
-      cover = KeepSprite(card.bx, card.by, 1)
+      cover = KeepSprite(card.bx, card.by, 3)
       self.covers.append(cover)
 
     self.cards = cards
@@ -992,5 +1048,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
