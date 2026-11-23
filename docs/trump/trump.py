@@ -184,23 +184,24 @@ class Card(BaseSprite):
 
 
 class KeepSprite(BaseSprite):
-  def __init__(self, bx, by):
+  def __init__(self, bx, by, index = 0):
     """ コンストラクタ """
     super().__init__(bx, by)
     self.bx = bx
     self.by = by
     self.calc()
+    self.index = index
 
   def draw(self):
     """ 描画処理 """
     if not self.visible:
       return
 
-    start_x = 224 + (16 if (pyxel.frame_count % 30) < 15 else 0)
+    start_x = 224 + 16 * self.index + (8 if (pyxel.frame_count % 30) < 15 else 0)
     pyxel.blt(self.x, self.y, 0,
       start_x, 24, self.w, self.h, CI_TR0)
     pyxel.blt(self.x, self.y + 8, 0,
-      start_x + 8, 24, self.w, self.h, CI_TR0)
+      start_x, 24, self.w, self.h, CI_TR0)
       # Debug
       #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
@@ -377,6 +378,8 @@ class Game:
       card.draw()
 
     self.keep.draw()
+    for v in self.covers:
+      v.draw()
     # プレイヤーを描画
     self.player.draw()
 
@@ -455,14 +458,11 @@ class Game:
       bbut = self.input_manager.fires[5]
       cbut = self.input_manager.fires[6]
       if abut:
-        if sel:
-          self.add_sel(sel)
-        else:
-          pass
+        #if sel:
+        self.add_sel(sel)
 
-      #if bbut:
-      # 閉じる
-      #pyxel.play(CH_SE, SE_CANCEL)
+      if bbut:
+        self_reset()
       if cbut:
         self.set_card_by_phase()
 
@@ -504,13 +504,16 @@ class Game:
         if v.paired:
           continue
 
-        if sels[0] != v.number % 13 and sels[1] != v.number % 13:
+        n_mod = v.number % 13
+        if sels[0] != n_mod and sels[1] != n_mod:
           continue
 
         ok = True
         # 非マッチは時間で閉じる
-        index = 0 if sels[0] == v.number % 13 else 1
+        index = 0 if sels[0] == n_mod else 1
         unmatch = 1 - index
+
+        self.covers[index].visible = False
 
         self.selected[index].paired = True
         v.paired = True
@@ -518,9 +521,10 @@ class Game:
         self.selected.pop(index)
         self.fail_count = 45
 
+        break
+
 
     if ok:
-      self.selected = []
       pyxel.play(CH_SE, SE_SUC)
       self.score += 100
     else:
@@ -966,13 +970,17 @@ class Game:
 
 
     # オープン
+    self.covers = []
     self.opened = []
     for i, v in enumerate(cur.anys):
-      card = Card(8 + i, -1, v["suit"], v["number"] + 1)
+      card = Card(7 + i, -1, v["suit"], v["number"] + 1)
       card.is_face = True
       cards.append(card)
 
       self.opened.append(card)
+
+      cover = KeepSprite(card.bx, card.by, 1)
+      self.covers.append(cover)
 
     self.cards = cards
     self.selected = []
