@@ -605,6 +605,7 @@ class Game:
           cur.hands[h][k] = {"suit": s, "number": n}
         break
 
+
     # ストレート
     seq = list(range(5 - 1, 15 - 1))
     self.shuffle(seq)
@@ -635,8 +636,8 @@ class Game:
       for i, v in enumerate(pseq):
         s = v["suit"]
         n = v["number"]
-        cur.check(s, n)
-        cur.hands[4][i] = v
+        cur.pick(s, n)
+        cur.hands[4][i] = {"suit": s, "number": n}
       break
 
 
@@ -650,35 +651,37 @@ class Game:
       stn_lower = -11
       pseq = []
       for i in range(13):
+        n = seq[i]
         sseq = [0, 1, 2, 3]
         self.shuffle(sseq)
         for j in range(4):
           s = sseq[j]
-          n = seq[i]
           if cur.check(s, n) and s != flash_suit and n != stn_upper and n != stn_lower:
-            pseq.append({"suit": sseq[j], "number": seq[i]})
+            pseq.append({"suit": s, "number": n})
             break
         if len(pseq) == 4 and flash_suit == -11:
-          flash_suit = -9
           count = 0
           for k in range(4):
             count += 1 if pseq[k]["suit"] == pseq[0]["suit"] else 0
-          flash_suit = pseq[0]["suit"] if count == 4 else -1
+          flash_suit = pseq[0]["suit"] if count == 4 else -9
 
           # ストレート回避 未実装
 
-      # 4枚までピックして最後はストレートとフラッシュ回避にした方が楽かも
 
       if len(pseq) < 5:
         continue
 
       pseq = pseq[:5]
+      #upper = max(pseq)
+      #lower = min(pseq)
+      #if upper - lower == 4:
+      #  continue
 
       for i, v in enumerate(pseq):
         s = v["suit"]
         n = v["number"]
         cur.pick(s, n)
-        cur.hands[0][i] = v
+        cur.hands[0][i] = {"suit": s, "number": n}
       break
 
 
@@ -719,6 +722,11 @@ class Game:
           break
 
       pseq = sorted(pseq, reverse=True)
+      # A は先頭へ
+      if pseq[4] == 1 - 1:
+        ace = pseq.pop(4)
+        pseq.insert(0, ace)
+
       for i, n in enumerate(pseq):
         cur.pick(s, n)
         cur.hands[5][i] = {"suit": s, "number": n}
@@ -747,13 +755,29 @@ class Game:
     cands = cands[:2]
     index = 0 if cands[0][0]["number"] > cands[1][0]["number"] else 1
     pseq = [cands[index][0], cands[index][1], cands[1-index][0], cands[1-index][1]]
+
+    # 2ペアの最後の1枚
+    pair_ns = [pseq[0]["number"], pseq[2]["number"]]
+    seq = list(range(13))
+    self.shuffle(seq)
+    for n in seq:
+      if n == pair_ns[0] or n == pair_ns[1]:
+        continue
+      sseq = [0, 1, 2, 3]
+      self.shuffle(sseq)
+      for s in sseq:
+        if cur.check(s, n):
+          pseq.append({"suit": s, "number": n})
+          break
+
+      if len(pseq) == 5:
+        break
+
     for i, v in enumerate(pseq):
       s = v["suit"]
       n = v["number"]
       cur.pick(s, n)
       cur.hands[2][i] = v
-
-    # 2ペアの最後の1枚
 
 
     # ワンペア(1-3)
@@ -804,7 +828,7 @@ class Game:
         s = v["suit"]
         n = v["number"]
         cur.pick(s, n)
-        cur.hands[1][i] = v
+        cur.hands[1][i] = {"suit": s, "number": n}
       break
 
 
@@ -817,6 +841,7 @@ class Game:
       if three_n == n:
         continue
       sseq = [0, 1, 2, 3]
+      self.shuffle(sseq)
       for s in sseq:
         if cur.check(s, n):
           cands.append({"suit": s, "number": n})
@@ -830,7 +855,7 @@ class Game:
         s = v["suit"]
         n = v["number"]
         cur.pick(s, n)
-        cur.hands[3][i+3] = v
+        cur.hands[3][i+3] = {"suit": s, "number": n}
 
 
     # フルハウスの残り
@@ -849,7 +874,7 @@ class Game:
         s = v["suit"]
         n = v["number"]
         cur.pick(s, n)
-        cur.hands[6][i + 3] = v
+        cur.hands[6][i + 3] = {"suit": s, "number": n}
       break
 
 
@@ -867,6 +892,7 @@ class Game:
 
     index = pyxel.rndi(0, 2)
     cur.hands[7][4] = pseq.pop(index)
+    cur.pick(cur.hands[7][4]["suit"], cur.hands[7][4]["number"])
     cur.anys = pseq
 
     print(cur)
@@ -893,7 +919,7 @@ class Game:
 
     # オープン
     for i, v in enumerate(cur.anys):
-      card = Card(7 + i, -1, v["suit"], v["number"] + 1)
+      card = Card(5 + i, -1, v["suit"], v["number"] + 1)
       cards.append(card)
 
     self.cards = cards
