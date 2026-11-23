@@ -7,7 +7,10 @@ import random
 
 W, H = 128, 128
 
-MES_Y = 104
+GAME_NAME = "memory"
+GAME_GENRE = GAME_NAME
+
+MES_Y = 112 + 8
 
 CI_GROUND = 3
 CI_MAINFONT = 7
@@ -86,9 +89,6 @@ class InputManager:
 
 
 class BaseSprite:
-  BW = 13
-  BH = 5
-
   def __init__(self, bx, by, w=8, h=8):
     """ コンストラクタ """
     self.bx = bx
@@ -100,8 +100,13 @@ class BaseSprite:
 
   def calc(self):
     """ブロック番号から位置へ"""
-    self.x = self.bx * 10
-    self.y = 20 + self.by * 20
+    global GAME_GENRE, GAME_NAME
+    if GAME_GENRE == GAME_NAME:
+      self.x = (1 + self.bx + (2 if self.bx >= 5 else 0)) * 10
+      self.y = 20 + self.by * 20
+    else:
+      self.x = self.bx * 10
+      self.y = 20 + self.by * 20
 
   def update(self):
     """ 更新処理 """
@@ -109,10 +114,6 @@ class BaseSprite:
 
   def draw(self):
     """ 描画処理(派生クラスで実装) """
-    pass
-
-  def move(self, spd, deg):
-    """ 移動 """
     pass
 
   def intersects(self, other):
@@ -180,6 +181,28 @@ class Card(BaseSprite):
         Card.VERT_TOP * 8, 3 * 8, self.w, self.h)
       pyxel.blt(self.x, self.y + 8, 1,
         (Card.VERT_TOP + 1) * 8, 3 * 8, self.w, self.h)
+
+
+class KeepSprite(BaseSprite):
+  def __init__(self, bx, by):
+    """ コンストラクタ """
+    super().__init__(bx, by)
+    self.bx = bx
+    self.by = by
+    self.calc()
+
+  def draw(self):
+    """ 描画処理 """
+    if not self.visible:
+      return
+
+    start_x = 224 + (16 if (pyxel.frame_count % 30) < 15 else 0)
+    pyxel.blt(self.x, self.y, 0,
+      start_x, 24, self.w, self.h, CI_TR0)
+    pyxel.blt(self.x, self.y + 8, 0,
+      start_x + 8, 24, self.w, self.h, CI_TR0)
+      # Debug
+      #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
 
 class PlayerSprite(BaseSprite):
@@ -264,7 +287,7 @@ class Phase:
     return ret
 
   def pick(self, suit, index_number):
-    """13を入れたら1として扱いインデックスは0"""
+    """13を入れたら ace として扱いインデックスは0"""
     self.rests[suit][0 if index_number == 13 else index_number] = False
     self.rest_num -= 1
 
@@ -303,6 +326,8 @@ class Game:
 
     # プレイヤーを初期化
     self.player = PlayerSprite(0, 0)
+    self.keep = KeepSprite(0, 0)
+    self.keep.visible = False
 
     self.input_manager = InputManager()
 
@@ -332,8 +357,6 @@ class Game:
     # プレイ中判定
     if self.game_mode != MODE_PLAY: return
 
-
-
     for card in self.cards:
       card.update()
 
@@ -341,19 +364,21 @@ class Game:
     """ 描画処理 """
     pyxel.cls(CI_GROUND)
 
-    # タイルマップ
-    #pyxel.bltm(0, 0, 0, 0, 0, 192, 128, 0)
+    if GAME_GENRE == GAME_NAME:
+      for i in range(10):
+        x = (0 if i < 5 else 70)
+        y = 4 + 20 + (i % 5) * 20
+        pyxel.blt(x, y, 1,
+          176 + i * 8, 8, 8, 8, CI_TR0)
 
-    # カメラ(セット)
-    #pyxel.camera(self.player.x - START_X, 0)
+
 
     for card in self.cards:
       card.draw()
 
+    self.keep.draw()
     # プレイヤーを描画
     self.player.draw()
-
-    #pyxel.camera() # カメラ(リセット)
 
     # メッセージ
     if self.game_mode == MODE_TITLE:
@@ -368,8 +393,10 @@ class Game:
         pyxel.channels[2].gain = self.gain
 
     elif self.game_mode == MODE_GAME_OVER:
-      msg = "GAME over"
-      pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
+      msg = "GAME OVER"
+      px = W/2 - len(msg) * 2
+      pyxel.rect(px - 2, MES_Y - 2, len(msg) * 4 + 2, 8, 8)
+      pyxel.text(px, MES_Y, msg, CI_MAINFONT)
 
     # スコアを描画
     pyxel.text(10, 4,
@@ -377,15 +404,19 @@ class Game:
 
   def reset(self):
     """ ステージを初期化 """
+    global GAME_GENRE, GAME_NAME
 
     self.score = 0
     self.fail_count = 0
 
     # カーソル
-    self.player.x = 0
+    self.player.x = 10
     self.player.y = 20 + 4 * 20
 
-    self.set_card()
+    if GAME_GENRE == GAME_NAME:
+      self.set_card_by_phase()
+    else:
+      self.set_card()
 
   def control(self):
     """ コントロール """
@@ -425,9 +456,7 @@ class Game:
       cbut = self.input_manager.fires[6]
       if abut:
         if sel:
-          if not sel.is_face:
-            self.add_sel(sel)
-
+          self.add_sel(sel)
         else:
           pass
 
@@ -451,35 +480,46 @@ class Game:
     self.selected.append(add)
     if len(self.selected) == 1:
       pyxel.play(CH_SE, SE_ON)
+
+      self.keep.visible = True
+      self.keep.bx = add.bx
+      self.keep.by = add.by
+      self.keep.calc()
       return
 
+
+    self.keep.visible = False
     # 通常チェック(任意ジョーカー無し)
-    sels = [self.selected[0].number, self.selected[1].number]
+    sels = [self.selected[0].number % 13, self.selected[1].number % 13]
     ok = False
     if sels[0] == sels[1]:
       ok = True
+
+      self.selected[0].paired = True
+      self.selected[1].paired = True
+      self.selected = []
     else:
       # オープン救済
       for i, v in enumerate(self.opened):
         if v.paired:
           continue
 
-        if sels[0] != v.number and sels[1] != v.number:
+        if sels[0] != v.number % 13 and sels[1] != v.number % 13:
           continue
 
         ok = True
-        # 非マッチを閉じる
-        index = 0 if sels[0] == v.number else 1
+        # 非マッチは時間で閉じる
+        index = 0 if sels[0] == v.number % 13 else 1
         unmatch = 1 - index
 
-        self.selected[unmatch].is_face = False
+        self.selected[index].paired = True
+        v.paired = True
 
-        self.selected[unmatch] = v
+        self.selected.pop(index)
+        self.fail_count = 45
 
 
     if ok:
-      self.selected[0].paired = True
-      self.selected[1].paired = True
       self.selected = []
       pyxel.play(CH_SE, SE_SUC)
       self.score += 100
@@ -921,16 +961,21 @@ class Game:
 
           v = cur.hands[index][j]
           card = Card(bx, by, v["suit"], v["number"] + 1)
+          card.is_face = False
           cards.append(card)
 
 
     # オープン
+    self.opened = []
     for i, v in enumerate(cur.anys):
       card = Card(8 + i, -1, v["suit"], v["number"] + 1)
+      card.is_face = True
       cards.append(card)
 
-    self.cards = cards
+      self.opened.append(card)
 
+    self.cards = cards
+    self.selected = []
 
 
 def main():
