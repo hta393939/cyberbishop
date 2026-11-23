@@ -116,13 +116,6 @@ class BaseSprite:
     """ 描画処理(派生クラスで実装) """
     pass
 
-  def intersects(self, other):
-    """ 矩形同士の当たり判定(AABB) """
-    if other.x + other.w < self.x: return False
-    if self.x + self.w < other.x: return False
-    if other.y + other.h < self.y: return False
-    if self.y + self.h < other.y: return False
-    return True
 
 class Card(BaseSprite):
   SPADES = 16
@@ -205,7 +198,7 @@ class KeepSprite(BaseSprite):
     if not self.visible:
       return
 
-    start_x = 224 + 16 * self.index + (8 if (pyxel.frame_count % 30) < 15 else 0)
+    start_x = 192 + 16 * self.index + (8 if (pyxel.frame_count % 30) < 15 else 0)
     pyxel.blt(self.x, self.y, 0,
       start_x, 24, self.w, self.h, CI_TR0)
     pyxel.blt(self.x, self.y + 8, 0,
@@ -281,7 +274,6 @@ class Phase:
       rest = [True] * 13
       self.rests.append(rest)
     self.hands = []
-    #self.hands = [[{"suit": -1, "number": -1}] * 5] * 10
     for i in range(10):
       hand = [{"suit": -1, "number": -1}] * 5
       self.hands.append(hand)
@@ -526,7 +518,7 @@ class Game:
         index = 0 if sels[0].num_equal(v) else 1
         unmatch = 1 - index
 
-        self.covers[index].visible = False
+        self.covers[i].visible = False
 
         self.selected[index].paired = True
         v.paired = True
@@ -594,7 +586,7 @@ class Game:
 
     # 9, ロイヤル
     suit = pyxel.rndi(0, 3)
-    for i, number in enumerate((13, 12, 11, 10, 9)):
+    for i, number in enumerate((14 - 1, 13 - 1, 12 - 1, 11 - 1, 10 - 1)):
       cur.pick(suit, number)
       cur.hands[9][i] = {"suit": suit, "number": number}
 
@@ -632,7 +624,6 @@ class Game:
         cur.hands[7][j] = {"suit": j, "number": n}
       break
 
-    print(cur)
 
     # 6, フルハウスの3, 3, スリーカードの3
     seq = list(range(13))
@@ -727,6 +718,8 @@ class Game:
       break
 
     print(f'straight, {st_ok}')
+    if not st_ok:
+      print(f'phase, {cur}')
 
 
     # 0: ハイカード(1-1-1-1-1)
@@ -735,10 +728,7 @@ class Game:
     for _ in range(10):
       seq = list(range(13))
       self.shuffle(seq)
-      index = 0
-      flash_suit = -11
-      stn_upper = -11
-      stn_lower = -11
+
       pseq = []
       for i in range(13):
         n = seq[i]
@@ -746,26 +736,26 @@ class Game:
         self.shuffle(sseq)
         for j in range(4):
           s = sseq[j]
-          if cur.check(s, n) and s != flash_suit and n != stn_upper and n != stn_lower:
+          if cur.check(s, n):
             pseq.append({"suit": s, "number": n})
             break
-        if len(pseq) == 4 and flash_suit == -11:
-          count = 0
-          for k in range(4):
-            count += 1 if pseq[k]["suit"] == pseq[0]["suit"] else 0
-          flash_suit = pseq[0]["suit"] if count == 4 else -9
-
-          # ストレート回避 未実装
-
 
       if len(pseq) < 5:
         continue
 
       pseq = pseq[:5]
-      #upper = max(pseq)
-      #lower = min(pseq)
-      #if upper - lower == 4:
-      #  continue
+      # フラッシュ
+      count = 0
+      for k in range(5):
+        count += 1 if pseq[k]["suit"] == pseq[0]["suit"] else 0
+      if count == 5:
+        continue
+
+      # ストレートはNG
+      upper_d = max(pseq, key=lambda x: x["number"])
+      lower_d = min(pseq, key=lambda x: x["number"])
+      if upper_d["number"] - lower_d["number"] == 4:
+        continue
 
       pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=0 else 20)*10)
       for i, v in enumerate(pseq):
