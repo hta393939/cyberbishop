@@ -144,6 +144,8 @@ class Card(BaseSprite):
     self.paired = False
 
     self.suit = suit
+    self.draw_suit = suit + Card.SPADES
+
     # 判定用数値
     self.number = number
     # 描画用参照
@@ -241,28 +243,43 @@ class Phase:
   def __init__(self):
     # True だとまだピックされていない
     # A: 0, 2: 1, ... 12: K
-    self.cards = [[True] * 4] * 13
-    self.hands = [[{"suit": -1, "number": -1}] * 5] * 10
+    self.rests = []
+    for i in range(4):
+      rest = [True] * 13
+      self.rests.append(rest)
+    self.hands = []
+    #self.hands = [[{"suit": -1, "number": -1}] * 5] * 10
+    for i in range(10):
+      hand = [{"suit": -1, "number": -1}] * 5
+      self.hands.append(hand)
     self.anys = [{"suit": -1, "number": -1}] * 2
+
+  def __str__(self) -> str:
+    ret = f'{self.anys}\n'
+    for i, s in enumerate(self.rests):
+      ret += f'{i} {s}\n'
+    for i, h in enumerate(self.hands):
+      ret += f'{i} {h}\n'
+    return ret
 
   def pick(self, suit, number):
     """14を入れたら1として扱いインデックスは0"""
-    self.cards[suit][(1 if number == 14 else number) - 1] = False
+    self.rests[suit][(1 if number == 14 else number) - 1] = False
 
   def check(self, suit, number):
     """残っていたら True"""
-    return self.cards[suit][(1 if number == 14 else number) - 1]
+    return self.rests[suit][(1 if number == 14 else number) - 1]
 
   def count_suit(self):
     ret = [0, 0, 0, 0]
     for i in range(4):
       for j in range(13):
-        ret[i] += 1 if self.cards[i][j] else 0
+        ret[i] += 1 if self.rests[i][j] else 0
     return ret
 
   def clone(self):
     ret = Phase()
-    ret.cards = self.cards.deepcopy()
+    ret.rests = self.rests.deepcopy()
     ret.hands = self.hands.deepcopy()
     ret.anys = self.anys.deepcopy()
     return ret
@@ -514,7 +531,7 @@ class Game:
     # 後で seed 配下にするかも
     random.shuffle(target)
 
-  def set_card_by_phase(self):
+  def create_phase(self):
     """ラップアラウンド無し"""
 
     cur = Phase()
@@ -525,26 +542,41 @@ class Game:
       cur.pick(suit, number)
       cur.hands[9][i] = {"suit": suit, "number": number}
 
-    # 7, フォーの4つ
-    number = pyxel.rndi(2, 9)
-    for i, s in (0, 1, 2, 3):
-      cur.pick(s, number)
-      cur.hands[7][i] = {"suit": s, "number": number}
-
     # 8, ストレートフラッシュ
-    for _ in range(10):
-      suit = pyxel.rndi(0, 3)
-      number = pyxel.rndi(5, 13)
+    number = pyxel.rndi(5, 13)
+    sseq = [0, 1, 2, 3]
+    self.shuffle(sseq)
+    for i in range(4):
+      s = sseq[i]
       count = 0
-      for i in range(5):
-        count += 1 if cur.check(suit, number - i) else 0
+      for j in range(5):
+        count += 1 if cur.check(s, number - j) else 0
       if count != 5:
         continue
 
-      for i in range(5):
-        cur.pick(suit, number - i)
-        cur.hands[8][i] = {"suit": suit, "number": number - i}
+      for j in range(5):
+        n = number - j
+        cur.pick(s, n)
+        cur.hands[8][j] = {"suit": s, "number": n}
+      break
 
+    # 7, フォーの4つ A-10 はもう使えない
+    seq = list(range(2, 10))
+    self.shuffle(seq)
+    for i in range(10 - 2):
+      n = seq[i]
+      count = 0
+      for j in (0, 1, 2, 3):
+        count += 1 if cur.check(j, n) else 0
+      if count < 4:
+        continue
+
+      for j in (0, 1, 2, 3):
+        cur.pick(j, n)
+        cur.hands[7][j] = {"suit": j, "number": n}
+      break
+
+    print(cur)
 
     # 6, フルハウスの3, 3, スリーカードの3
     seq = list(range(13))
@@ -552,36 +584,40 @@ class Game:
     index = 0
     for h in [6, 3]:
       for _ in range(13):
+        n = seq[index]
         sseq = [0, 1, 2, 3]
         self.shuffle(sseq)
         # pick 順番
         pseq = []
         for j in range(4):
-          if cur.pick(sseq[j], seq[index]):
-            pseq.append(sseq[j])
+          s = sseq[j]
+          if cur.check(s, n):
+            pseq.append(s)
         if len(pseq) < 3:
           index += 1
           continue
         # 3枚以上選択した場合
-        pseq = sorted(pseq[:2])
+        pseq = sorted(pseq[:3], reverse=False)
 
-        for k, v in pseq:
-          cur.pick(v, index)
-          cur.hands[h][k] = {"suit": v, "number": index}
+        for k, s in enumerate(pseq):
+          cur.pick(s, n)
+          cur.hands[h][k] = {"suit": s, "number": n}
 
+        break
 
     # ストレート
     for _ in range(10):
       number = pyxel.rndi(5, 14)
       # 未実装
 
-    # ハイカード(1-1-1-1-1)
+    # 0: ハイカード(1-1-1-1-1)
     for _ in range(10):
-      seq = range(13)
+      seq = list(range(13))
       self.shuffle(seq)
       index = 0
-      flash_suit = -2
-      straight_number = -2
+      flash_suit = -11
+      stn_upper = -11
+      stn_lower = -11
       pseq = []
       for i in range(13):
         sseq = [0, 1, 2, 3]
@@ -589,15 +625,15 @@ class Game:
         for j in range(4):
           s = sseq[j]
           n = seq[i]
-          if cur.pick(s, n) and s != flash_suit and n != straight_number:
+          if cur.check(s, n) and s != flash_suit and n != stn_upper and n != stn_lower:
             pseq.append({"suit": sseq[j], "number": seq[i]})
             break
-        if len(pseq) == 4 and flash_suit == -2:
-          straight_suit = -1
+        if len(pseq) == 4 and flash_suit == -11:
+          flash_suit = -9
           count = 0
           for k in range(4):
-            count += 1 if pseq[k].suit == pseq[0].suit else 0
-          flash_suit = pseq[0].suit if count == 4 else -1
+            count += 1 if pseq[k]["suit"] == pseq[0]["suit"] else 0
+          flash_suit = pseq[0]["suit"] if count == 4 else -1
 
           # ストレート回避 未実装
 
@@ -606,17 +642,26 @@ class Game:
       if len(pseq) < 5:
         continue
 
+      pseq = pseq[:5]
+
+      for i, v in enumerate(pseq):
+        s = v["suit"]
+        n = v["number"]
+        cur.pick(s, n)
+        cur.hands[0][i] = v
+      break
+
 
     # フラッシュ(5)
     sseq = [0, 1, 2, 3]
     self.shuffle(sseq)
-    for v in sseq:
-      seq = range(13)
+    for s in sseq:
+      seq = list(range(13))
       self.shuffle(seq)
 
       pseq = []
       for n in seq:
-        if cur.check(v, n):
+        if cur.check(s, n):
           pseq.append(n)
 
       if len(pseq) < 5:
@@ -627,7 +672,7 @@ class Game:
 
 
     # ツーペア(2-2-1)
-    seq = range(13)
+    seq = list(range(13))
     self.shuffle(seq)
     for i in range(2):
       pass
@@ -635,9 +680,52 @@ class Game:
     # ワンペア(1-3)
     # フルハウスの残りのペア(2) スリーの残り(2)
 
+
     # フォーの残りとオープン(3)
+    pseq = []
+    for s in range(4):
+      for n in range(13):
+        if not cur.check(s, n):
+          continue
+        pseq.append({"suit": s, "number": n})
+        cur.pick(s, n)
+
+    if len(pseq) != 3:
+      print(f'rest num {len(pseq)} is not 3')
+
+    index = pyxel.rndi(0, 2)
+    cur.hands[7][4] = pseq.pop(index)
+    cur.anys = pseq
+
     print(cur)
-    pass
+    return cur
+
+  def set_card_by_phase(self):
+    cur = self.create_phase()
+
+    cards = []
+
+    # 上位と下位
+    for i in range(5):
+      for j in range(5):
+        for k in range(2):
+          # k0: 上位, k1: 下位
+          index = 4 - i + (1 - k) * 5
+          bx = j + k * 5
+          by = i
+
+          v = cur.hands[index][j]
+          card = Card(bx, by, v["suit"], v["number"])
+          cards.append(card)
+
+
+    # オープン
+    for i, v in enumerate(cur.anys):
+      card = Card(7 + i, -1, v["suit"], v["number"])
+      cards.append(card)
+
+    self.cards = cards
+
 
 
 def main():
