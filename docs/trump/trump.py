@@ -172,7 +172,7 @@ class Card(BaseSprite):
 
     if self.is_face:
       pyxel.blt(self.x, self.y, 1,
-        self.suit * 8, 3 * 8, self.w, self.h)
+        self.draw_suit * 8, 3 * 8, self.w, self.h)
       pyxel.blt(self.x, self.y + 8, 1,
         self.draw_number * 8, 3 * 8, self.w, self.h)
     else:
@@ -496,7 +496,7 @@ class Game:
     for i in range(13):
       for j in range(4):
         card = Card(i, j,
-          (Card.SPADES, Card.HEARTS, Card.DIAMONDS, Card.CLUBS)[j],
+          j,
           i + 1,
         )
         card.is_face = True if pyxel.rndi(0, 1) == 0 else False
