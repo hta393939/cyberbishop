@@ -677,6 +677,7 @@ class Game:
       #if upper - lower == 4:
       #  continue
 
+      pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=0 else 20)*10)
       for i, v in enumerate(pseq):
         s = v["suit"]
         n = v["number"]
@@ -809,6 +810,7 @@ class Game:
       # 残り3枚
       noseq = list(range(13))
       self.shuffle(noseq)
+      nos = []
       for n in noseq:
         if n == pair_n:
           continue
@@ -816,14 +818,16 @@ class Game:
         self.shuffle(sseq)
         for s in sseq:
           if cur.check(s, n):
-            cands.append({"suit": s, "number": n})
+            nos.append({"suit": s, "number": n})
             break
 
-      if len(cands) < 5:
+      if len(nos) < 3:
         continue
+      nos = nos[:3]
+      nos.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=0 else 20)*10)
+      for v in nos:
+        cands.append(v)
 
-      cands = cands[:5]
-      # 後ろ3つの降順ソート未実装
       for i, v in enumerate(cands):
         s = v["suit"]
         n = v["number"]
@@ -850,7 +854,8 @@ class Game:
       print(f'too few for three rest')
     else:
       cands = cands[:2]
-      # 降順ソート未実装
+      # 破壊降順ソート
+      cands.sort(reverse=True, key=lambda x: (3-x["suit"])+10*(x["number"] if x["number"]!=0 else 20))
       for i, v in enumerate(cands):
         s = v["suit"]
         n = v["number"]
@@ -893,6 +898,8 @@ class Game:
     index = pyxel.rndi(0, 2)
     cur.hands[7][4] = pseq.pop(index)
     cur.pick(cur.hands[7][4]["suit"], cur.hands[7][4]["number"])
+
+    pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=0 else 20)*10)
     cur.anys = pseq
 
     print(cur)
@@ -919,7 +926,7 @@ class Game:
 
     # オープン
     for i, v in enumerate(cur.anys):
-      card = Card(5 + i, -1, v["suit"], v["number"] + 1)
+      card = Card(8 + i, -1, v["suit"], v["number"] + 1)
       cards.append(card)
 
     self.cards = cards
