@@ -192,6 +192,8 @@ class KeepSprite(BaseSprite):
   def __init__(self, bx, by, index = 0):
     """ コンストラクタ """
     super().__init__(bx, by)
+    self.w = 8
+    self.h = 16
     self.bx = bx
     self.by = by
     self.calc()
@@ -202,11 +204,10 @@ class KeepSprite(BaseSprite):
     if not self.visible:
       return
 
-    start_x = 192 + 16 * self.index + (8 if (pyxel.frame_count % 30) < 15 else 0)
+    start_x = 8 * self.index + (8 if (pyxel.frame_count % 30) < 15 else 0)
     pyxel.blt(self.x, self.y, 0,
-      start_x, 24, self.w, self.h, CI_TR0)
-    pyxel.blt(self.x, self.y + 8, 0,
-      start_x, 24, self.w, self.h, CI_TR0)
+      start_x, 16, self.w, self.h, CI_TR0)
+
       # Debug
       #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
@@ -219,6 +220,8 @@ class PlayerSprite(BaseSprite):
     self.bx = bx
     self.by = by
     self.calc()
+    self.w = 8
+    self.h = 16
 
   def update(self, fires):
     """ 更新処理 """
@@ -259,11 +262,9 @@ class PlayerSprite(BaseSprite):
 
   def draw(self):
     """ 描画処理 """
-    start_x = 160 + (16 if (pyxel.frame_count % 30) < 15 else 0)
+    start_x = 176 + (8 if (pyxel.frame_count % 30) < 15 else 0)
     pyxel.blt(self.x, self.y, 0,
-      start_x, 24, self.w, self.h, CI_TR0)
-    pyxel.blt(self.x, self.y + 8, 0,
-      start_x + 8, 24, self.w, self.h, CI_TR0)
+      start_x, 16, self.w, self.h, CI_TR0)
       # Debug
       #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
@@ -340,8 +341,12 @@ class Game:
 
     # プレイヤーを初期化
     self.player = PlayerSprite(0, 0)
-    self.keep = KeepSprite(0, 0)
+    self.keep = KeepSprite(0, 0, 28)
     self.keep.visible = False
+    self.effs = [KeepSprite(4, -1, 24), KeepSprite(5, -1, 26)]
+    for v in self.effs:
+      #v.visible = False
+      pass
 
     self.input_manager = InputManager()
 
@@ -393,6 +398,9 @@ class Game:
     self.keep.draw()
     for v in self.covers:
       v.draw()
+    for v in self.effs:
+      v.draw()
+
     # プレイヤーを描画
     self.player.draw()
 
@@ -1035,7 +1043,7 @@ class Game:
 
       self.opened.append(card)
 
-      cover = KeepSprite(card.bx, card.by, 3)
+      cover = KeepSprite(card.bx, card.by, 30)
       self.covers.append(cover)
 
     self.cards = cards
