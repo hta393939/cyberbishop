@@ -51,9 +51,13 @@ class InputManager:
       pyxel.KEY_C,
       pyxel.GAMEPAD1_BUTTON_X,
     )
+    self.dbuts = (
+      pyxel.KEY_V,
+      pyxel.GAMEPAD1_BUTTON_Y,
+    )
 
     self.keyss = (self.ups, self.rights, self.downs, self.lefts)
-    self.triggerss = (self.abuts, self.bbuts, self.cbuts)
+    self.triggerss = (self.abuts, self.bbuts, self.cbuts, self.dbuts)
 
     self.axes = (
       pyxel.GAMEPAD1_AXIS_LEFTX,
@@ -64,8 +68,8 @@ class InputManager:
     self.reset()
 
   def reset(self):
-    self.counts = [0] * 7
-    self.fires = [False] * 7
+    self.counts = [0] * 8
+    self.fires = [False] * 8
 
   def update(self):
     """fires から取得する"""
@@ -469,10 +473,11 @@ class Game:
       abut = self.input_manager.fires[4]
       bbut = self.input_manager.fires[5]
       cbut = self.input_manager.fires[6]
+      dbut = self.input_manager.fires[7]
       if abut:
         self.add_sel(sel)
 
-      if cbut:
+      if dbut:
         self.reset()
 
 
@@ -615,8 +620,7 @@ class Game:
     # 7, フォーの4つ A-10 はもう使えない
     seq = list(range(2 - 1, 10 - 1))
     self.shuffle(seq)
-    for i in range(10 - 2):
-      n = seq[i]
+    for n in seq:
       count = 0
       for j in (0, 1, 2, 3):
         count += 1 if cur.check(j, n) else 0
@@ -627,33 +631,6 @@ class Game:
         cur.pick(j, n)
         cur.hands[7][j] = {"suit": j, "number": n}
       break
-
-
-    # 6, フルハウスの3, 3, スリーカードの3
-    seq = list(range(13))
-    self.shuffle(seq)
-    index = 0
-    for h in [6, 3]:
-      for _ in range(13):
-        n = seq[index]
-        sseq = [0, 1, 2, 3]
-        self.shuffle(sseq)
-        # pick 順番
-        pseq = []
-        for j in range(4):
-          s = sseq[j]
-          if cur.check(s, n):
-            pseq.append(s)
-        if len(pseq) < 3:
-          index += 1
-          continue
-        # 3枚以上選択した場合
-        pseq = sorted(pseq[:3], reverse=False)
-
-        for k, s in enumerate(pseq):
-          cur.pick(s, n)
-          cur.hands[h][k] = {"suit": s, "number": n}
-        break
 
 
     # ストレート
@@ -726,6 +703,37 @@ class Game:
       print(f'phase, {cur}')
 
 
+
+    # 6, フルハウスの3, 3, スリーカードの3
+    seq = list(range(13))
+    self.shuffle(seq)
+    index = 0
+    for h in [6, 3]:
+      for _ in range(13):
+        n = seq[index]
+        sseq = [0, 1, 2, 3]
+        self.shuffle(sseq)
+        # pick 順番
+        pseq = []
+        for j in range(4):
+          s = sseq[j]
+          if cur.check(s, n):
+            pseq.append(s)
+        if len(pseq) < 3:
+          index += 1
+          continue
+        # 3枚以上選択した場合
+        pseq = sorted(pseq[:3], reverse=False)
+
+        for k, s in enumerate(pseq):
+          cur.pick(s, n)
+          cur.hands[h][k] = {"suit": s, "number": n}
+        break
+
+
+
+
+
     # 0: ハイカード(1-1-1-1-1)
     nums = cur.count_number()
     high_ok = False
@@ -748,7 +756,7 @@ class Game:
         continue
 
       pseq = pseq[:5]
-      # フラッシュ
+      # フラッシュはNG
       count = 0
       for k in range(5):
         count += 1 if pseq[k]["suit"] == pseq[0]["suit"] else 0
@@ -868,6 +876,27 @@ class Game:
       cur.pick(s, n)
       cur.hands[2][i] = v
 
+    # ----
+
+    # フルハウスの残りの1ペア ここがNGだった
+    for pair_n in seq:
+      sseq = [0, 1, 2, 3]
+      self.shuffle(sseq)
+      cs = []
+      for s in sseq:
+        if cur.check(s, pair_n):
+          cs.append({"suit": s, "number": pair_n})
+      if len(cs) < 2:
+        continue
+
+      cs = cs[:2]
+      for i, v in enumerate(cs):
+        s = v["suit"]
+        n = v["number"]
+        cur.pick(s, n)
+        cur.hands[6][i + 3] = {"suit": s, "number": n}
+      break
+
 
     # ワンペア(1-3)
     one_ok = False
@@ -952,26 +981,6 @@ class Game:
         n = v["number"]
         cur.pick(s, n)
         cur.hands[3][i+3] = {"suit": s, "number": n}
-
-
-    # フルハウスの残り
-    for pair_n in seq:
-      sseq = [0, 1, 2, 3]
-      self.shuffle(sseq)
-      cs = []
-      for s in sseq:
-        if cur.check(s, pair_n):
-          cs.append({"suit": s, "number": pair_n})
-      if len(cs) < 2:
-        continue
-
-      cs = cs[:2]
-      for i, v in enumerate(cs):
-        s = v["suit"]
-        n = v["number"]
-        cur.pick(s, n)
-        cur.hands[6][i + 3] = {"suit": s, "number": n}
-      break
 
 
     # フォーの残りとオープン(3)
