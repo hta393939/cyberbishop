@@ -101,10 +101,11 @@ class BaseSprite:
     self.w = w
     self.h = h
     self.visible = True
+    self.timer = -1
 
   def calc(self):
     """ブロック番号から位置へ"""
-    global GAME_GENRE, GAME_NAME
+    #global GAME_GENRE, GAME_NAME
     if GAME_GENRE == GAME_NAME:
       self.x = (1 + self.bx + (2 if self.bx >= 5 else 0)) * 10
       self.y = 20 + self.by * 20
@@ -114,7 +115,14 @@ class BaseSprite:
 
   def update(self):
     """ 更新処理 """
-    pass
+    if self.timer > 0:
+      self.timer -= 1
+      if self.timer == 0:
+        self.timer = -1
+        self.visible = False
+      else:
+        self.visible = True
+
 
   def draw(self):
     """ 描画処理(派生クラスで実装) """
@@ -345,8 +353,7 @@ class Game:
     self.keep.visible = False
     self.effs = [KeepSprite(4, -1, 24), KeepSprite(5, -1, 26)]
     for v in self.effs:
-      #v.visible = False
-      pass
+      v.visible = False
 
     self.input_manager = InputManager()
 
@@ -378,6 +385,9 @@ class Game:
 
     for card in self.cards:
       card.update()
+
+    for eff in self.effs:
+      eff.update()
 
   def draw(self):
     """ 描画処理 """
@@ -430,7 +440,7 @@ class Game:
 
   def reset(self):
     """ ステージを初期化 """
-    global GAME_GENRE, GAME_NAME
+    #global GAME_GENRE, GAME_NAME
 
     self.score = 0
     self.miss = 0
@@ -517,9 +527,16 @@ class Game:
     if sels[0].num_equal(sels[1]):
       ok = True
 
-      self.selected[0].paired = True
-      self.selected[1].paired = True
+      for i, v in enumerate(self.selected):
+        v.paired = True
+        eff = self.effs[i]
+        eff.bx = v.bx
+        eff.by = v.by
+        eff.calc()
+        eff.index = 24
+        eff.timer = 45
       self.selected = []
+
     else:
       # オープン救済
       for i, v in enumerate(self.opened):
@@ -536,8 +553,17 @@ class Game:
 
         self.covers[i].visible = False
 
-        self.selected[index].paired = True
-        v.paired = True
+        #self.selected[index].paired = True
+        #v.paired = True
+
+        for i2, v2 in enumerate((self.selected[index], v)):
+          v.paired = True
+          eff = self.effs[i2]
+          eff.bx = v2.bx
+          eff.by = v2.by
+          eff.calc()
+          eff.index = 24
+          eff.timer = 45
 
         self.selected.pop(index)
         self.fail_count = 45
@@ -547,6 +573,15 @@ class Game:
       pyxel.play(CH_SE, SE_SUC)
       self.score += 100
     else:
+
+      for i2, v2 in enumerate(self.selected):
+        eff = self.effs[i2]
+        eff.bx = v2.bx
+        eff.by = v2.by
+        eff.calc()
+        eff.index = 26
+        eff.timer = 45
+
       self.miss += 1
       self.fail_count = 45
       pyxel.play(CH_SE, SE_BEEP)
