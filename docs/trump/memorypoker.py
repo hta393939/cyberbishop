@@ -27,6 +27,8 @@ SE_MENU = 4
 SE_CANCEL = 5
 SE_WALK = 6
 
+HIGH_ACE = 14
+
 MODE_TITLE = "title"
 MODE_PLAY = "play"
 MODE_GAME_OVER = "game_over"
@@ -156,7 +158,7 @@ class Card(BaseSprite):
     self.number = number
     # 描画用参照
     self.draw_number = number
-    if number == 1 or number == 14:
+    if number == 1 or number == HIGH_ACE:
       self.draw_number = Card.ACE
     elif number >= 10 and number <= 13:
       self.draw_number = number + Card.TEN_OFFSET - 10
@@ -171,9 +173,9 @@ class Card(BaseSprite):
   def num_equal(self, b: Card) -> bool:
     if self.number == b.number:
       return True
-    if self.number == 14 and b.number == 1:
+    if self.number == HIGH_ACE and b.number == 1:
       return True
-    if self.number == 1 and b.number == 14:
+    if self.number == 1 and b.number == HIGH_ACE:
       return True
     return False
 
@@ -281,10 +283,11 @@ class Phase:
   def __init__(self):
     self.rest_num = 4 * 13
     # True だとまだピックされていない
-    # A: 0, 2: 1, ... 12: K
+    # A: 1, ... 13: K
     self.rests = []
     for i in range(4):
-      rest = [True] * 13
+      rest = [True] * 15
+      rest[0] = False
       self.rests.append(rest)
     self.hands = []
     for i in range(10):
@@ -301,28 +304,28 @@ class Phase:
     return ret
 
   def pick(self, suit, index_number):
-    """13を入れたら ace として扱いインデックスは0"""
-    self.rests[suit][0 if index_number == 13 else index_number] = False
+    """14を入れたら ace として扱いインデックスは1"""
+    self.rests[suit][1 if index_number == HIGH_ACE else index_number] = False
     self.rest_num -= 1
 
   def check(self, suit, index_number):
     """残っていたら True"""
-    return self.rests[suit][0 if index_number == 13 else index_number]
+    return self.rests[suit][1 if index_number == HIGH_ACE else index_number]
 
   def count_suit(self):
     ret = [0, 0, 0, 0]
     for i in range(4):
-      for j in range(13):
-        ret[i] += 1 if self.rests[i][j] else 0
+      for n in range(1, 14):
+        ret[i] += 1 if self.rests[i][n] else 0
     return ret
 
   def count_number(self):
-    ret = [0] * 14
-    for n in range(13):
+    ret = [0] * 15
+    for n in range(1, 14):
       for s in range(4):
         ret[n] += 1 if self.rests[s][n] else 0
     # ace のコピー
-    ret[13] = ret[0]
+    ret[HIGH_ACE] = ret[1]
     return ret
 
   def clone(self):
@@ -640,10 +643,10 @@ class Game:
     suit = pyxel.rndi(0, 3)
     for i, number in enumerate((1, 13, 12, 11, 10)):
       cur.pick(suit, number)
-      cur.hands[9][i - 1] = {"suit": suit, "number": number}
+      cur.hands[9][i] = {"suit": suit, "number": number}
 
-    # 8, ストレートフラッシュ
-    number = pyxel.rndi(5 - 1, 13 - 1)
+    # 8, ストレートフラッシュ ace は不可
+    number = pyxel.rndi(5, 13)
     sseq = [0, 1, 2, 3]
     self.shuffle(sseq)
     for i in range(4):
@@ -661,7 +664,7 @@ class Game:
       break
 
     # 7, フォーの4つ A-10 はもう使えない
-    seq = list(range(2 - 1, 10 - 1))
+    seq = list(range(2, 10))
     self.shuffle(seq)
     for n in seq:
       count = 0
@@ -678,7 +681,8 @@ class Game:
 
     # ストレート
     nums = cur.count_number()
-    seq = list(range(5 - 1, 15 - 1))
+    # [5からHIGH_ACE]
+    seq = list(range(5, 15))
     self.shuffle(seq)
     st_ok = False
     for start_n in seq:
@@ -737,7 +741,7 @@ class Game:
         s = v["suit"]
         n = v["number"]
         cur.pick(s, n)
-        cur.hands[4][i] = {"suit": s, "number": n}
+        cur.hands[4][i] = {"suit": s, "number": n if n != HIGH_ACE else 1}
       st_ok = True
       break
 
@@ -748,7 +752,7 @@ class Game:
 
 
     # 6, フルハウスの3, 3, スリーカードの3
-    seq = list(range(13))
+    seq = list(range(1, 14))
     self.shuffle(seq)
     index = 0
     for h in [6, 3]:
@@ -774,19 +778,15 @@ class Game:
         break
 
 
-
-
-
     # 0: ハイカード(1-1-1-1-1)
     nums = cur.count_number()
     high_ok = False
     for _ in range(10):
-      seq = list(range(13))
+      seq = list(range(1, 14))
       self.shuffle(seq)
 
       pseq = []
-      for i in range(13):
-        n = seq[i]
+      for n in range(1, 14):
         sseq = [0, 1, 2, 3]
         self.shuffle(sseq)
         for j in range(4):
@@ -828,7 +828,7 @@ class Game:
     sseq = [0, 1, 2, 3]
     self.shuffle(sseq)
     for s in sseq:
-      seq = list(range(13))
+      seq = list(range(1, 14))
       self.shuffle(seq)
       # 数字を入れる
       pseq = []
@@ -860,8 +860,8 @@ class Game:
           break
 
       pseq = sorted(pseq, reverse=True)
-      # A は先頭へ
-      if pseq[4] == 1 - 1:
+      # ace は先頭へ
+      if pseq[4] == 1:
         ace = pseq.pop(4)
         pseq.insert(0, ace)
 
@@ -874,7 +874,7 @@ class Game:
     print(f'flash_ok, {flash_ok}')
 
     # ツーペア(2-2-1)
-    seq = list(range(13))
+    seq = list(range(1, 14))
     self.shuffle(seq)
     cands = []
     for pair_n in seq:
@@ -898,7 +898,7 @@ class Game:
 
     # 2ペアの最後の1枚
     pair_ns = [pseq[0]["number"], pseq[2]["number"]]
-    seq = list(range(13))
+    seq = list(range(1, 14))
     self.shuffle(seq)
     for n in seq:
       if n == pair_ns[0] or n == pair_ns[1]:
@@ -944,7 +944,7 @@ class Game:
     # ワンペア(1-3)
     one_ok = False
     for _ in range(10):
-      seq = list(range(13))
+      seq = list(range(1, 14))
       self.shuffle(seq)
       cands = []
       for pair_n in seq:
@@ -969,7 +969,7 @@ class Game:
 
       pair_n = cands[0]["number"]
       # 残り3枚
-      noseq = list(range(13))
+      noseq = list(range(1, 14))
       self.shuffle(noseq)
       nos = []
       for n in noseq:
@@ -1001,7 +1001,7 @@ class Game:
 
     # スリーの残り(2)
     three_n = cur.hands[3][0]["number"]
-    seq = list(range(13))
+    seq = list(range(1, 14))
     self.shuffle(seq)
     cands = []
     for n in seq:
@@ -1029,7 +1029,7 @@ class Game:
     # フォーの残りとオープン(3)
     pseq = []
     for s in range(4):
-      for n in range(13):
+      for n in range(1, 14):
         if not cur.check(s, n):
           continue
         pseq.append({"suit": s, "number": n})
@@ -1063,7 +1063,7 @@ class Game:
           by = i
 
           v = cur.hands[index][j]
-          card = Card(bx, by, v["suit"], v["number"] + 1)
+          card = Card(bx, by, v["suit"], v["number"])
           card.is_face = False
           cards.append(card)
 
@@ -1072,7 +1072,7 @@ class Game:
     self.covers = []
     self.opened = []
     for i, v in enumerate(cur.anys):
-      card = Card(7 + i, -1, v["suit"], v["number"] + 1)
+      card = Card(7 + i, -1, v["suit"], v["number"])
       card.is_face = True
       cards.append(card)
 
