@@ -43,6 +43,7 @@ class InputManager:
 
     self.abuts = (
       pyxel.KEY_Z,
+      pyxel.KEY_SPACE,
       pyxel.GAMEPAD1_BUTTON_A,
     )
     self.bbuts = (
@@ -526,8 +527,50 @@ class Game:
     self.keep.visible = False
     # 通常チェック(任意ジョーカー無し)
     sels = [self.selected[0], self.selected[1]]
+
+    sel_pair_ok = sels[0].num_equal(sels[1])
     ok = False
-    if sels[0].num_equal(sels[1]):
+
+    # オープン救済。オープンがペアだった場合はオープン優先
+    for i, v in enumerate(self.opened):
+      if v.paired:
+        continue
+
+      if (not sels[0].num_equal(v)) and (not sels[1].num_equal(v)):
+        continue
+
+
+      # NOTE: オープンがペアだった場合はオープン優先
+      if sel_pair_ok:
+        if self.opened[0].num_equal(self.opened[1]):
+          sel_pair_ok = False
+        else:
+          # 救済せず通常選択を優先
+          continue
+
+
+      ok = True
+      # 非マッチは時間で閉じる
+      index = 0 if sels[0].num_equal(v) else 1
+      unmatch = 1 - index
+
+      self.covers[i].visible = False
+
+      for i2, v2 in enumerate((self.selected[index], v)):
+        v.paired = True
+        eff = self.effs[i2]
+        eff.bx = v2.bx
+        eff.by = v2.by
+        eff.calc()
+        eff.index = 24
+        eff.timer = 45
+
+      self.selected.pop(index)
+      self.fail_count = 45
+      break
+
+
+    if sel_pair_ok:
       ok = True
 
       for i, v in enumerate(self.selected):
@@ -540,37 +583,6 @@ class Game:
         eff.timer = 45
       self.selected = []
 
-    else:
-      # オープン救済
-      for i, v in enumerate(self.opened):
-        if v.paired:
-          continue
-
-        if (not sels[0].num_equal(v)) and (not sels[1].num_equal(v)):
-          continue
-
-        ok = True
-        # 非マッチは時間で閉じる
-        index = 0 if sels[0].num_equal(v) else 1
-        unmatch = 1 - index
-
-        self.covers[i].visible = False
-
-        #self.selected[index].paired = True
-        #v.paired = True
-
-        for i2, v2 in enumerate((self.selected[index], v)):
-          v.paired = True
-          eff = self.effs[i2]
-          eff.bx = v2.bx
-          eff.by = v2.by
-          eff.calc()
-          eff.index = 24
-          eff.timer = 45
-
-        self.selected.pop(index)
-        self.fail_count = 45
-        break
 
     if ok:
       pyxel.play(CH_SE, SE_SUC)
@@ -786,7 +798,7 @@ class Game:
       self.shuffle(seq)
 
       pseq = []
-      for n in range(1, 14):
+      for n in seq:
         sseq = [0, 1, 2, 3]
         self.shuffle(sseq)
         for j in range(4):
@@ -812,7 +824,7 @@ class Game:
       if upper_d["number"] - lower_d["number"] == 4:
         continue
 
-      pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=0 else 20)*10)
+      pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else 20)*10)
       for i, v in enumerate(pseq):
         s = v["suit"]
         n = v["number"]
@@ -985,7 +997,7 @@ class Game:
       if len(nos) < 3:
         continue
       nos = nos[:3]
-      nos.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=0 else 20)*10)
+      nos.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else 20)*10)
       for v in nos:
         cands.append(v)
 
@@ -1018,7 +1030,7 @@ class Game:
     else:
       cands = cands[:2]
       # 破壊降順ソート
-      cands.sort(reverse=True, key=lambda x: (3-x["suit"])+10*(x["number"] if x["number"]!=0 else 20))
+      cands.sort(reverse=True, key=lambda x: (3-x["suit"])+10*(x["number"] if x["number"]!=1 else 20))
       for i, v in enumerate(cands):
         s = v["suit"]
         n = v["number"]
@@ -1042,7 +1054,7 @@ class Game:
     cur.hands[7][4] = pseq.pop(index)
     cur.pick(cur.hands[7][4]["suit"], cur.hands[7][4]["number"])
 
-    pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=0 else 20)*10)
+    pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else 20)*10)
     cur.anys = pseq
 
     print(cur)
