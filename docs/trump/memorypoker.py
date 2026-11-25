@@ -638,9 +638,9 @@ class Game:
 
     # 9, ロイヤル
     suit = pyxel.rndi(0, 3)
-    for i, number in enumerate((14 - 1, 13 - 1, 12 - 1, 11 - 1, 10 - 1)):
+    for i, number in enumerate((1, 13, 12, 11, 10)):
       cur.pick(suit, number)
-      cur.hands[9][i] = {"suit": suit, "number": number}
+      cur.hands[9][i - 1] = {"suit": suit, "number": number}
 
     # 8, ストレートフラッシュ
     number = pyxel.rndi(5 - 1, 13 - 1)
