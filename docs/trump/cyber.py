@@ -183,37 +183,31 @@ class Card(BaseSprite):
         (Card.VERT_TOP + 1) * 8, 3 * 8, self.w, self.h)
 
 
-class PlayerSprite(BaseSprite):
+class Player(Node):
 
-  def __init__(self, x, y):
-    """ コンストラクタ """
-    super().__init__(x, y)
-    #self.gravity = 0.4 # 重力
-    #self.jump_x = 1.0 # ジャンプx
-    #self.jump_y = -3.4 # ジャンプy
+  def __init__(self):
+    self.outline = 8
+
+    self._rot = 0
+    self._x = 0
+    self._y = 0
+
+  def on_draw(self):
+    m = Mat4.from_euler(Vec3(0, self._rot, 0))
+    pose = Mat4.from_translation(Vec3(self._x, self._y, 0)) * m
+    self.box(pose, Vec3(8, 8, 8), 11)
 
   def update(self, fires):
     """ 更新処理 """
     super().update()
-    #self.vy += self.gravity # Gravity
-    if fires[3]:
-      self.x -= 10
-    if fires[1] or fires[4]:
-      self.x += 10
-    if fires[0]:
-      self.y -= 20
-    if fires[2]:
-      self.y += 20
 
-  def draw(self):
-    """ 描画処理 """
-    start_x = 160 + (16 if (pyxel.frame_count % 30) < 15 else 0)
-    pyxel.blt(self.x, self.y, 0,
-      start_x, 24, self.w, self.h, CI_TR0)
-    pyxel.blt(self.x, self.y + 8, 0,
-      start_x + 8, 24, self.w, self.h, CI_TR0)
-        # Debug
-        #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
+    # 回転と移動をざっくりと
+    self._rot += -0.1 if fires[0] else 0
+    self._rot +=  0.1 if fires[2] else 0
+    self._rot +=  0.1 if fires[1] else 0
+    self._rot += -0.1 if fires[3] else 0
+
+
 
 
 class TunnelSprite(BaseSprite):
@@ -233,6 +227,8 @@ class TunnelSprite(BaseSprite):
         #pyxel.rectb(self.x, self.y, self.w, self.h, 3)
 
 class StaticCube(Node):
+  def __init__(self):
+    self.outline = 8
   def on_draw(self):
     self.box(Mat4.IDENTITY, Vec3(8, 8, 8), 11)
 
@@ -248,7 +244,7 @@ class Game:
     self.game_mode = MODE_TITLE
 
     # プレイヤーを初期化
-    self.player = PlayerSprite(START_X, START_Y)
+    self.player = Player()
 
     self.input_manager = InputManager()
 
@@ -263,6 +259,8 @@ class Game:
     self.root.add_child(StaticCube())
 
     self.root.add_child(LargePlane(0, 0, 0))
+
+    self.root.add_child(self.player)
 
     shading = Shading(pyxel.colors)
     shading.direction = Vec3(0.4, -1, -0.5)
@@ -280,9 +278,6 @@ class Game:
 
   def update(self):
     """ 更新処理 """
-
-    # スコアを更新
-    self.score = int(self.player.x - START_X)
 
     self.input_manager.update()
 
@@ -328,9 +323,6 @@ class Game:
     #for card in self.cards:
     #  card.draw()
 
-    # プレイヤーを描画
-    self.player.draw()
-
     pyxel.camera() # カメラ(リセット)
 
     # メッセージ
@@ -349,8 +341,6 @@ class Game:
     """ ステージを初期化 """
 
     # プレイヤー
-    self.player.x = START_X
-    self.player.y = START_Y
 
     self.rot = 0
 
