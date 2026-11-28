@@ -171,6 +171,14 @@ class Card(BaseSprite):
     card = Card(x, y, Card.JOKER_SUIT, Card.JOKER_NUMBER)
     return card
 
+  @staticmethod
+  def dict_comp(a, b):
+    ascore = (3 - a["suit"]) + (HIGH_ACE if a["number"] == 1 else a["number"]) * 10
+    bscore = (3 - b["suit"]) + (HIGH_ACE if b["number"] == 1 else b["number"]) * 10
+    return ascore - bscore
+
+
+
   def num_equal(self, b: Card) -> bool:
     if self.number == b.number:
       return True
@@ -316,17 +324,19 @@ class Phase:
   def count_suit(self):
     ret = [0, 0, 0, 0]
     for i in range(4):
-      for n in range(1, 14):
+      for n in range(1, HIGH_ACE + 1):
         ret[i] += 1 if self.rests[i][n] else 0
     return ret
 
   def count_number(self):
     ret = [0] * 15
-    for n in range(1, 14):
+    for n in range(1, HIGH_ACE + 1):
       for s in range(4):
         ret[n] += 1 if self.rests[s][n] else 0
     # ace のコピー
-    ret[HIGH_ACE] = ret[1]
+    union = ret[1] + ret[HIGH_ACE]
+    ret[1] = union
+    ret[HIGH_ACE] = union
     return ret
 
   def clone(self):
@@ -694,7 +704,7 @@ class Game:
     # ストレート
     nums = cur.count_number()
     # [5からHIGH_ACE]
-    seq = list(range(5, 15))
+    seq = list(range(5, HIGH_ACE + 1))
     self.shuffle(seq)
     st_ok = False
     for start_n in seq:
@@ -905,7 +915,9 @@ class Game:
       print(f'pair too few, {len(cands)}')
 
     cands = cands[:2]
-    index = 0 if cands[0][0]["number"] > cands[1][0]["number"] else 1
+    index = 0 if Card.dict_comp(cands[0][0], cands[1][0]) >= 0 else 1
+    print(f'index, {index}, {cands[0][0]}, {cands[1][0]}')
+    #index = 0 if cands[0][0]["number"] > cands[1][0]["number"] else 1
     pseq = [cands[index][0], cands[index][1], cands[1-index][0], cands[1-index][1]]
 
     # 2ペアの最後の1枚
