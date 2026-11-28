@@ -634,6 +634,10 @@ class Game:
     if ok:
       pyxel.play(CH_SE, SE_SUC)
       self.score += 100
+
+      if self.score / 10 + self.miss == 26:
+        self.game_mode = MODE_GAME_CLEAR
+
     else:
 
       for i2, v2 in enumerate(self.selected):
