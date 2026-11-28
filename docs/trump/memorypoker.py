@@ -1099,6 +1099,7 @@ class Game:
       cur = self.create_phase()
       if cur:
         break
+      print(f'failure {i}')
 
 
     cards = []
