@@ -34,7 +34,7 @@ HIGH_ACE = 14
 MODE_TITLE = "title"
 MODE_PLAY = "play"
 MODE_GAME_OVER = "game_over"
-
+MODE_GAME_CLEAR = "game_clear"
 
 class InputManager:
   def __init__(self):
@@ -284,7 +284,7 @@ class PlayerSprite(BaseSprite):
     if self.bx < 0:
       self.bx = 0
       dx = 0
-    elif self.bx >= bum:
+    elif self.bx >= bnum:
       self.bx = bnum - 1
       dx = 0
     if self.by < 0:
@@ -379,7 +379,7 @@ class Game:
 
 
     # ゲームモード
-    self.game_mode = MODE_TITLE
+    self.game_mode = MODE_PLAY
 
     # プレイヤーを初期化
     self.player = PlayerSprite(0, 0)
@@ -449,9 +449,9 @@ class Game:
     self.player.draw()
 
     # メッセージ
-    if self.game_mode == MODE_TITLE:
-      msg = "CLICK TO PLAY"
-      pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
+    if self.game_mode == MODE_PLAY:
+      #msg = "CLICK TO PLAY"
+      #pyxel.text(W/2-len(msg)*2, MES_Y, msg, CI_MAINFONT)
 
       if self.first_gen:
         self.first_gen = False
@@ -465,6 +465,11 @@ class Game:
       px = W/2 - len(msg) * 2
       pyxel.rect(px - 2, MES_Y - 2, len(msg) * 4 + 2, 8, 8)
       pyxel.text(px, MES_Y, msg, CI_MAINFONT)
+    elif self.game_mode == MODE_GAME_CLEAR:
+      msg = "CLEAR!"
+      px = W/2 - len(msg) * 2
+      pyxel.rect(px - 2, MES_Y - 2, len(msg) * 4 + 2, 8, 1)
+      pyxel.text(px, MES_Y, msg, CI_MAINFONT)     
 
     # スコアを描画
     pyxel.text(10, 4,
@@ -496,21 +501,33 @@ class Game:
       self.play_control()
 
 
-    if not pyxel.btnp(pyxel.MOUSE_BUTTON_LEFT): return
+    abut = self.input_manager.fires[4]
+    bbut = self.input_manager.fires[5]
+    cbut = self.input_manager.fires[6]
+    click = abut or bbut or cbut
 
-    # Title -> Play
-    if self.game_mode == MODE_TITLE:
-      self.game_mode = MODE_PLAY
-      pyxel.play(CH_SE, 3)
-      return
+    if click:
+      # Title -> Play
+      if self.game_mode == MODE_TITLE:
+        self.game_mode = MODE_PLAY
+        pyxel.play(CH_SE, 3)
+        pyxel.reset()
+        return
 
-    # Game Over -> Title
-    if self.game_mode == MODE_GAME_OVER:
-      self.game_mode = MODE_TITLE
+      # Game Over -> Title
+      if self.game_mode == MODE_GAME_OVER:
+        self.game_mode = MODE_TITLE
 
-      # Reset
-      self.reset()
-      return
+        # Reset
+        pyxel.play(CH_SE, 3)
+        self.reset()
+        return
+
+      if self.game_mode == MODE_GAME_CLEAR:
+        self.game_mode = MODE_PLAY
+        pyxel.play(CH_SE, 3)
+        pyxel.reset()
+        return
 
 
   def play_control(self):
