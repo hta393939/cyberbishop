@@ -9,6 +9,8 @@ W, H = 128, 128
 
 GAME_NAME = "memorypoker"
 GAME_GENRE = GAME_NAME
+# スート
+OPEN_SUIT = True
 
 MES_Y = 120
 
@@ -193,6 +195,17 @@ class Card(BaseSprite):
 
   def draw(self):
     if not self.visible:
+      return
+
+    if OPEN_SUIT:
+      pyxel.blt(self.x, self.y, 1,
+        self.draw_suit * 8, 3 * 8, self.w, self.h)
+      if self.is_face:
+        pyxel.blt(self.x, self.y + 8, 1,
+          self.draw_number * 8, 3 * 8, self.w, self.h)
+      else:
+        pyxel.blt(self.x, self.y + 8, 1,
+          (Card.VERT_TOP + 1) * 8, 3 * 8, self.w, self.h)
       return
 
     if self.is_face:
