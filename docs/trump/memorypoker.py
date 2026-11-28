@@ -59,6 +59,8 @@ class InputManager:
     self.dbuts = (
       pyxel.KEY_V,
       pyxel.GAMEPAD1_BUTTON_Y,
+      pyxel.GAMEPAD1_BUTTON_BACK,
+      pyxel.GAMEPAD1_BUTTON_START,
     )
 
     self.keyss = (self.ups, self.rights, self.downs, self.lefts)
@@ -272,13 +274,18 @@ class PlayerSprite(BaseSprite):
     if fires[2]:
       dy = 1
 
+    if dx != 0: # 横優先で斜め不可
+      dy = 0
+
+    bnum = 10
+
     self.bx += dx
     self.by += dy
     if self.bx < 0:
       self.bx = 0
       dx = 0
-    elif self.bx > 12:
-      self.bx = 12
+    elif self.bx >= bum:
+      self.bx = bnum - 1
       dx = 0
     if self.by < 0:
       self.by = 0
@@ -519,7 +526,7 @@ class Game:
       bbut = self.input_manager.fires[5]
       cbut = self.input_manager.fires[6]
       dbut = self.input_manager.fires[7]
-      if abut:
+      if abut or bbut or cbut:
         self.add_sel(sel)
 
       if dbut:
@@ -847,7 +854,7 @@ class Game:
       if upper_d["number"] - lower_d["number"] == 4:
         continue
 
-      pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else 20)*10)
+      pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else HIGH_ACE)*10)
       for i, v in enumerate(pseq):
         s = v["suit"]
         n = v["number"]
@@ -1022,7 +1029,7 @@ class Game:
       if len(nos) < 3:
         continue
       nos = nos[:3]
-      nos.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else 20)*10)
+      nos.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else HIGH_ACE)*10)
       for v in nos:
         cands.append(v)
 
@@ -1055,7 +1062,7 @@ class Game:
     else:
       cands = cands[:2]
       # 破壊降順ソート
-      cands.sort(reverse=True, key=lambda x: (3-x["suit"])+10*(x["number"] if x["number"]!=1 else 20))
+      cands.sort(reverse=True, key=lambda x: (3-x["suit"])+10*(x["number"] if x["number"]!=1 else HIGH_ACE))
       for i, v in enumerate(cands):
         s = v["suit"]
         n = v["number"]
@@ -1074,19 +1081,25 @@ class Game:
 
     if len(pseq) != 3:
       print(f'rest num {len(pseq)} is not 3')
+      return None
 
     index = pyxel.rndi(0, 2)
     cur.hands[7][4] = pseq.pop(index)
     cur.pick(cur.hands[7][4]["suit"], cur.hands[7][4]["number"])
 
-    pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else 20)*10)
+    pseq.sort(reverse=True, key=lambda x: (3-x["suit"])+(x["number"] if x["number"]!=1 else HIGH_ACE)*10)
     cur.anys = pseq
 
     print(cur)
     return cur
 
   def set_card_by_phase(self):
-    cur = self.create_phase()
+
+    for i in range(10):
+      cur = self.create_phase()
+      if cur:
+        break
+
 
     cards = []
 
